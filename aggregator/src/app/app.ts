@@ -1,4 +1,4 @@
-import { Application, oakCors } from "../../deps.ts";
+import { Application, oakCors, SecretsManager } from "../../deps.ts";
 
 import * as env from "../env.ts";
 import EthereumService from "./EthereumService.ts";
@@ -17,7 +17,39 @@ import BundleTable from "./BundleTable.ts";
 import AggregationStrategy from "./AggregationStrategy.ts";
 import AggregationStrategyRouter from "./AggregationStrategyRouter.ts";
 
+const init_postgres_config = () => {
+  const secretRegion = env.AWS.SECRET_REGION;
+  const secretName = env.AWS.SECRET_NAME;
+  var secretsManagerClient = new SecretsManager({
+    region: secretRegion
+  });
+  return new Promise((resolve, reject) => {
+    secretsManagerClient.getSecretValue({
+      SecretId: secretName
+    }, function (err, data) {
+      if (err) {
+        reject(err)
+      } else {
+        if ('SecretString' in data) {
+          let secret = {};            
+          secret = JSON.parse(data.SecretString);
+          env.PG.HOST = secret.host;
+          env.PG.PORT = secret.port;
+          env.PG.USER = secret.user;
+          env.PG.PASSWORD = secret.password;
+          env.PG.DB_NAME = secret.dbname;
+        }
+        resolve(data);
+      }
+    })
+  });
+}
+
 export default async function app(emit: (evt: AppEvent) => void) {
+  if(env.PG.HOST == undefined || env.PG.HOST == ''){
+    await init_postgres_config();
+  }
+
   const { addresses } = await getNetworkConfig();
 
   const clock = Clock.create();

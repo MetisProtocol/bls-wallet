@@ -84,3 +84,5 @@ export {
 } from "https://deno.land/x/postquery@v0.1.1/mod.ts";
 
 export type { TableOptions } from "https://deno.land/x/postquery@v0.1.1/mod.ts";
+
+export {SecretsManager} from "https://deno.land/x/aws_sdk@v3.32.0-1/client-secrets-manager/mod.ts";
