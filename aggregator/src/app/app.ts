@@ -38,6 +38,7 @@ const init_postgres_config = () => {
           env.PG.USER = secret.user;
           env.PG.PASSWORD = secret.password;
           env.PG.DB_NAME = secret.dbname;
+          env.PRIVATE_KEY_AGG = secret.privateKeyAgg;
         }
         resolve(data);
       }
