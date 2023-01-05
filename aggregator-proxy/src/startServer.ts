@@ -10,6 +10,6 @@ runAggregatorProxy(
   networkConfig.port,
   '0.0.0.0',
   () => {
-    console.log('Proxying aggregator on port 8081');
+    console.log('Proxying aggregator on port ', networkConfig.port);
   },
 );
