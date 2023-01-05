@@ -47,3 +47,7 @@ runAggregatorProxy(
 ## Example dApp using a proxy aggregator
 
 - https://github.com/JohnGuilding/single-pool-dex
+
+
+## start server
+npx ts-node src\startServer.ts
