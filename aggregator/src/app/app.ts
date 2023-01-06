@@ -47,9 +47,9 @@ const init_postgres_config = () => {
 }
 
 export default async function app(emit: (evt: AppEvent) => void) {
-  if(env.PG.HOST == undefined || env.PG.HOST == ''){
-    await init_postgres_config();
-  }
+  // if(env.PG.HOST == undefined || env.PG.HOST == ''){
+  //   await init_postgres_config();
+  // }
 
   const { addresses } = await getNetworkConfig();
 

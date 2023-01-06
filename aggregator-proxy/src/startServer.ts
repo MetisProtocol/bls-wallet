@@ -1,15 +1,18 @@
 import { runAggregatorProxy } from "../src";
-import networkConfig from "./config";
-
+import dotenv from 'dotenv';
+dotenv.config();
+const AggregatorUrl:any=process.env.AGGREGATOR_URL
+const AggregatorPort:any=process.env.AGGREGATOR_PROXY_PORT
+console.log("AGGREGATOR_URL:",process.env.AGGREGATOR_URL)
 runAggregatorProxy(
-  networkConfig.upstreamAggregatorUrl,
+  AggregatorUrl,
   async b => {
     console.log('proxying bundle', JSON.stringify(b, null, 2));
     return b;
   },
-  networkConfig.port,
+  AggregatorPort,
   '0.0.0.0',
   () => {
-    console.log('Proxying aggregator on port ', networkConfig.port);
+    console.log('Proxying aggregator on port ', AggregatorPort);
   },
 );
