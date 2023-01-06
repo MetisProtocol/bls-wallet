@@ -67,6 +67,11 @@ export default function AggregatorProxyCallback(
     }
   });
 
+  router.get('/status', bodyParser(), async (ctx) => {
+      ctx.status = 200;  
+      ctx.body = 'ok';  
+  });
+
   app.use(router.routes());
 
   return app.callback();

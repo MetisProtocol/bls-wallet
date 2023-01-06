@@ -39,5 +39,10 @@ export default function BundleRouter(bundleService: BundleService) {
     },
   );
 
+  router.get('status', async (ctx) => {
+    ctx.status = 200;  
+    ctx.response.body = 'ok';  
+  });
+
   return router;
 }
