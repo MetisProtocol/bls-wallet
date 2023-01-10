@@ -16,10 +16,10 @@ export const NETWORK_CONFIG_PATH = requireEnv("NETWORK_CONFIG_PATH");
 export const PRIVATE_KEY_AGG = requireEnv("PRIVATE_KEY_AGG");
 export const PRIVATE_KEY_ADMIN = requireEnv("PRIVATE_KEY_ADMIN");
 
-export const AWS = {
-  SECRET_REGION: requireEnv("SECRET_REGION"),
-  SECRET_NAME: requireEnv("SECRET_NAME"),
-};
+// export const AWS = {
+//   SECRET_REGION: requireEnv("SECRET_REGION"),
+//   SECRET_NAME: requireEnv("SECRET_NAME"),
+// };
 
 export const PG = {
   HOST: requireEnv("PG_HOST"),
