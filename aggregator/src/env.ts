@@ -29,6 +29,12 @@ export const PG = {
   DB_NAME: requireEnv("PG_DB_NAME"),
 };
 
+export const ADDRESS = {
+  VERIFICATION_GATEWAY: requireEnv("VERIFICATION_GATEWAY"),
+  UTILITIES: requireEnv("UTILITIES"),
+  TEST_TOKEN: requireEnv("TEST_TOKEN"),
+};
+
 export const BUNDLE_TABLE_NAME = requireEnv("BUNDLE_TABLE_NAME");
 
 /**

@@ -5,10 +5,22 @@ import Router from '@koa/router';
 import bodyParser from 'koa-bodyparser';
 import { Bundle, bundleFromDto, Aggregator } from 'bls-wallet-clients';
 import reporter from 'io-ts-reporters';
+import httpClient from "./httpClient";
+import dotenv from 'dotenv';
+dotenv.config();
 
 import BundleDto from './BundleDto';
 
 (globalThis as any).fetch ??= fetch;
+
+
+async function verifyToken(accessToken: string){
+  const metisUrl:any = process.env.METIS_URL;
+  const verifyTokenResult = await httpClient.sendTrans(metisUrl, "api/v1/verify_token", "token=" + accessToken, 'get');
+  // console.log('verifyTokenResult=', verifyTokenResult);
+  return verifyTokenResult;
+}
+
 
 export default function AggregatorProxyCallback(
   upstreamAggregatorUrl: string,
@@ -21,6 +33,19 @@ export default function AggregatorProxyCallback(
   const router = new Router();
 
   router.post('/bundle', bodyParser(), async (ctx) => {
+    const verifyTokenResult = await verifyToken(ctx.header["access-token"] + "");
+    if(verifyTokenResult.code != 200){
+      ctx.status = verifyTokenResult.code;
+      ctx.body = verifyTokenResult.message;
+      return;
+    } else {
+      if(!verifyTokenResult.data.pass){
+        ctx.status = 403;
+        ctx.body = "permission denied";
+        return;
+      }
+    }
+
     const decodeResult = BundleDto.decode(ctx.request.body);
 
     if ('left' in decodeResult) {
@@ -39,6 +64,19 @@ export default function AggregatorProxyCallback(
   });
 
   router.post('/estimateFee', bodyParser(), async (ctx) => {
+    const verifyTokenResult = await verifyToken(ctx.header["access-token"] + "");
+    if(verifyTokenResult.code != 200){
+      ctx.status = verifyTokenResult.code;
+      ctx.body = verifyTokenResult.message;
+      return;
+    } else {
+      if(!verifyTokenResult.data.pass){
+        ctx.status = 403;
+        ctx.body = "permission denied";
+        return;
+      }
+    }
+
     const decodeResult = BundleDto.decode(ctx.request.body);
 
     if ('left' in decodeResult) {
