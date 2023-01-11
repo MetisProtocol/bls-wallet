@@ -20,7 +20,7 @@ export default async function TestBlsWallets(
       const secret = rng.seed(`${i}`).address();
       return await BlsWalletWrapper.connect(
         secret,
-        addresses.verificationGateway,
+        env.ADDRESS.VERIFICATION_GATEWAY,
         parent.provider,
       );
     }),

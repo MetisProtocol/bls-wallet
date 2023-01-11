@@ -14,7 +14,7 @@ import TestBlsWallets from "./helpers/TestBlsWallets.ts";
 const { addresses } = await getNetworkConfig();
 
 const provider = new ethers.providers.JsonRpcProvider(env.RPC_URL);
-const testErc20 = MockERC20__factory.connect(addresses.testToken, provider);
+const testErc20 = MockERC20__factory.connect(env.ADDRESS.TEST_TOKEN, provider);
 const client = new AggregatorClient(env.ORIGIN);
 
 const [wallet] = await TestBlsWallets(provider, 1);
