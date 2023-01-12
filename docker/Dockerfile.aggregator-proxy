@@ -10,4 +10,5 @@ WORKDIR /app
 COPY --from=BUILDER /app/node_modules ./node_modules
 COPY --from=BUILDER /app/package.json ./
 COPY --from=BUILDER /app/dist ./
+# ci trigger testing
 ENTRYPOINT [ "node", "startServer.js" ]

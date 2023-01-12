@@ -7,4 +7,5 @@ COPY ./networks ./networks
 COPY ./src ./src
 COPY ./programs/aggregator.ts ./programs/aggregator.ts
 RUN deno cache --unstable ./programs/aggregator.ts
+# ci trigger testing
 CMD [ "run", "--unstable", "-A", "./programs/aggregator.ts"]
