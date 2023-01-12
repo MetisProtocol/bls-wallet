@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - aggregator/**
+      - docker/Dockerfile.aggregator
     branches:
       - master
       - staging
