@@ -53,3 +53,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           context: aggregator-proxy
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.K8S_DEPLOY_TOKEN }}
+          repository: metisProtocol/k8s-apps
+          event-type: apply_blswallet_aggregator_proxy_image
+          client-payload: |
+            {
+              "ref_name": "${{ github.ref_name }}", 
+              "image_tag": "${{ steps.docker-meta.outputs.tags }}"
+            }
