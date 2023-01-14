@@ -1,6 +1,8 @@
-import { runAggregatorProxy } from "../src";
+import runAggregatorProxy from "./runAggregatorProxy";
+
 import dotenv from 'dotenv';
 dotenv.config();
+
 const AggregatorUrl:any=process.env.AGGREGATOR_URL
 const AggregatorPort:any=process.env.AGGREGATOR_PROXY_PORT
 console.log("AGGREGATOR_URL:",process.env.AGGREGATOR_URL)

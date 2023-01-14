@@ -1,0 +1,10 @@
+FROM denoland/deno:1.29.1
+USER deno
+WORKDIR /app
+COPY deps.ts .
+RUN deno cache deps.ts
+COPY ./networks ./networks
+COPY ./src ./src
+COPY ./programs/aggregator.ts ./programs/aggregator.ts
+RUN deno cache --unstable ./programs/aggregator.ts
+CMD [ "run", "--unstable", "-A", "./programs/aggregator.ts"]
