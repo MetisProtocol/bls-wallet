@@ -1,10 +1,10 @@
-name: aggregator-proxy
+name: proxy
 on:
   workflow_dispatch:
   push:
     paths:
       - aggregator-proxy/**
-      - docker/Dockerfile.aggregator-proxy
+      - docker/Dockerfile.proxy
     branches:
       - master
       - staging
@@ -16,7 +16,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  aggregator_proxy_release:
+  proxy_release:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo
@@ -47,7 +47,7 @@ jobs:
         id: docker-build-push
         uses: docker/build-push-action@v3
         with:
-          file: docker/Dockerfile.aggregator-proxy
+          file: docker/Dockerfile.proxy
           push: true
           tags: ${{ steps.docker-meta.outputs.tags }}
           cache-from: type=gha
@@ -59,7 +59,7 @@ jobs:
         with:
           token: ${{ secrets.K8S_DEPLOY_TOKEN }}
           repository: metisProtocol/k8s-apps
-          event-type: apply_blswallet_aggregator_proxy_image
+          event-type: apply_blswallet_proxy_image
           client-payload: |
             {
               "ref_name": "${{ github.ref_name }}", 
