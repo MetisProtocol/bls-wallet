@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM denoland/deno:1.29.1
 USER deno
 WORKDIR /app
@@ -7,4 +8,5 @@ COPY ./networks ./networks
 COPY ./src ./src
 COPY ./programs/aggregator.ts ./programs/aggregator.ts
 RUN deno cache --unstable ./programs/aggregator.ts
-CMD [ "run", "--unstable", "-A", "./programs/aggregator.ts"]
+ADD --chmod=664 --chown=deno https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem /aws/rds-ca.pem
+CMD [ "run", "--unstable", "-A", "--cert", "/aws/rds-ca.pem", "./programs/aggregator.ts"]
