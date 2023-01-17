@@ -18,7 +18,7 @@ export default function createQueryClient(
     password: env.PG.PASSWORD,
     database: env.PG.DB_NAME,
     tls: {
-      enable: false,
+      enabled: false,
       enforce: false,
     },
   });
