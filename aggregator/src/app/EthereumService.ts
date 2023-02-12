@@ -264,7 +264,7 @@ export default class EthereumService {
         bundle,
         { 
           nonce: this.NextNonce(),
-          gasLimit: gasFees.mul(115).div(100)
+          gasLimit: gasFees.mul(200).div(100)
          },
       ];
 
