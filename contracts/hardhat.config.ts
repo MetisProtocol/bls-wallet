@@ -9,6 +9,7 @@ import chaiAsPromised from "chai-as-promised";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import defaultDeployerWallets from "./shared/helpers/defaultDeployerWallet";
+// import { getOperationResults } from "./clients/src";
 
 dotenv.config();
 
@@ -75,6 +76,25 @@ task("sendEth", "Sends ETH to an address")
       await txnRes.wait();
     },
   );
+
+
+  // task("getOperationErrors", "Gets errors from a bundle L2 transactions")
+  // .addParam("txnhash", "L2 bundle txn hash", undefined, types.string)
+  // .setAction(async ({ txnhash }: { txnhash: string }, hre) => {
+  //   const { provider } = hre.ethers;
+  //   const txn = await provider.getTransaction(txnhash);
+  //   const receipt = await txn.wait();
+
+  //   const results = getOperationResults(receipt);
+
+  //   const errors = results
+  //     .filter((r) => r.error)
+  //     .map(
+  //       ({ error: err }, i) =>
+  //         `operation ${i}, action ${err.actionIndex}: ${err.message}`,
+  //     );
+  //   console.log(errors);
+  // });
 
 // Do any needed pre-test setup here.
 task("test").setAction(async (_taskArgs, _hre, runSuper) => {
@@ -150,6 +170,13 @@ const config: HardhatUserConfig = {
       // chainId: 42161
       url: process.env.ARBITRUM_URL,
       accounts,
+      gasPrice: 700000000,
+    },
+    geori: {
+      chainId: 599,
+      url: process.env.GEORI_URL,
+      accounts: ['46db1fbb6f87a490923b5782f609634c5ff5420abda4838858eaf1edcc82ff01',
+        'fe888b3ad71e37e13311fbb389895d2245594a851bcd5e3a40109fd2c4294760'],
       gasPrice: 700000000,
     },
     // optimistic_local: {

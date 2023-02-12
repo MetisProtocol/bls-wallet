@@ -18,7 +18,9 @@
   "author": "James Zaki",
   "license": "MIT",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.7.3"
+    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/contracts-upgradeable": "^4.8.1",
+    "@thehubbleproject/bls": "^0.5.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.1",
