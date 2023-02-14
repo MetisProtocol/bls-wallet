@@ -63,6 +63,14 @@ export const FEE_TYPE = requireEnv("FEE_TYPE");
 export const FEE_PER_GAS = requireBigNumberEnv("FEE_PER_GAS");
 export const FEE_PER_BYTE = requireBigNumberEnv("FEE_PER_BYTE");
 
+let ENV_GAS_LIMIT = 0;
+try{
+  ENV_GAS_LIMIT = requireEnv("GAS_LIMIT")
+}catch(e){
+  ENV_GAS_LIMIT = 150
+}
+export const GAS_LIMIT = ENV_GAS_LIMIT;
+
 if (!/^(ether|token:0x[0-9a-fA-F]*)$/.test(FEE_TYPE)) {
   throw new Error(`FEE_TYPE has invalid format: "${FEE_TYPE}"`);
 }

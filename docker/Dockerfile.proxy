@@ -1,0 +1,13 @@
+FROM node:18-alpine as BUILDER
+WORKDIR /app
+COPY ./package.json ./yarn.lock ./
+RUN yarn
+COPY ./ ./
+RUN yarn build
+
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=BUILDER /app/node_modules ./node_modules
+COPY --from=BUILDER /app/package.json ./
+COPY --from=BUILDER /app/dist ./
+ENTRYPOINT [ "node", "startServer.js" ]
