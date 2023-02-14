@@ -35,7 +35,7 @@ const { addresses } = await getNetworkConfig();
 
 const wallet = await BlsWalletWrapper.connect(
   privateKey,
-  addresses.verificationGateway,
+  env.ADDRESS.VERIFICATION_GATEWAY,
   provider,
 );
 

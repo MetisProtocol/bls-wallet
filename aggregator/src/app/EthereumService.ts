@@ -258,10 +258,18 @@ export default class EthereumService {
     assert(bundle.operations.length > 0, "Cannot process empty bundle");
     assert(maxAttempts > 0, "Must have at least one attempt");
 
+    const gasFees = await this.verificationGateway.estimateGas.processBundle(bundle);
+    let gasLimit = 150;
+    if(env != null && env.GAS_LIMIT != null && env.GAS_LIMIT >= 110){
+      gasLimit = env.GAS_LIMIT;
+    }
     const processBundleArgs: Parameters<VerificationGateway["processBundle"]> =
       [
         bundle,
-        { nonce: this.NextNonce() },
+        { 
+          nonce: this.NextNonce(),
+          gasLimit: gasFees.mul(gasLimit).div(100)
+         },
       ];
 
     const attempt = async () => {

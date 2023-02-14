@@ -35,7 +35,7 @@ const { addresses } = await getNetworkConfig();
 const provider = new ethers.providers.JsonRpcProvider(env.RPC_URL);
 const adminWallet = AdminWallet(provider);
 
-const testErc20 = MockERC20__factory.connect(addresses.testToken, provider);
+const testErc20 = MockERC20__factory.connect(env.ADDRESS.TEST_TOKEN, provider);
 
 const client = new AggregatorClient(env.ORIGIN);
 
@@ -50,7 +50,7 @@ log("Checking/minting test tokens...");
 
 for (const wallet of sendWallets) {
   const testErc20 = MockERC20__factory.connect(
-    addresses.testToken,
+    env.ADDRESS.TEST_TOKEN,
     adminWallet,
   );
 

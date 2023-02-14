@@ -14,12 +14,12 @@ const ethereumService = await EthereumService.create(
   (evt) => {
     console.log(evt);
   },
-  addresses.verificationGateway,
-  addresses.utilities,
+  env.ADDRESS.VERIFICATION_GATEWAY,
+  env.ADDRESS.UTILITIES,
   env.PRIVATE_KEY_AGG,
 );
 
-const testErc20 = MockERC20__factory.connect(addresses.testToken, provider);
+const testErc20 = MockERC20__factory.connect(env.ADDRESS.TEST_TOKEN, provider);
 const [wallet] = await TestBlsWallets(provider, 1);
 const startBalance = await testErc20.balanceOf(wallet.address);
 

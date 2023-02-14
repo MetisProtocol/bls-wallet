@@ -16,10 +16,10 @@ export const NETWORK_CONFIG_PATH = requireEnv("NETWORK_CONFIG_PATH");
 export const PRIVATE_KEY_AGG = requireEnv("PRIVATE_KEY_AGG");
 export const PRIVATE_KEY_ADMIN = requireEnv("PRIVATE_KEY_ADMIN");
 
-export const AWS = {
-  SECRET_REGION: requireEnv("SECRET_REGION"),
-  SECRET_NAME: requireEnv("SECRET_NAME"),
-};
+// export const AWS = {
+//   SECRET_REGION: requireEnv("SECRET_REGION"),
+//   SECRET_NAME: requireEnv("SECRET_NAME"),
+// };
 
 export const PG = {
   HOST: requireEnv("PG_HOST"),
@@ -27,6 +27,12 @@ export const PG = {
   USER: requireEnv("PG_USER"),
   PASSWORD: requireEnv("PG_PASSWORD"),
   DB_NAME: requireEnv("PG_DB_NAME"),
+};
+
+export const ADDRESS = {
+  VERIFICATION_GATEWAY: requireEnv("VERIFICATION_GATEWAY"),
+  UTILITIES: requireEnv("UTILITIES"),
+  TEST_TOKEN: requireEnv("TEST_TOKEN"),
 };
 
 export const BUNDLE_TABLE_NAME = requireEnv("BUNDLE_TABLE_NAME");
@@ -56,6 +62,14 @@ export const LOG_QUERIES = requireBoolEnv("LOG_QUERIES");
 export const FEE_TYPE = requireEnv("FEE_TYPE");
 export const FEE_PER_GAS = requireBigNumberEnv("FEE_PER_GAS");
 export const FEE_PER_BYTE = requireBigNumberEnv("FEE_PER_BYTE");
+
+let ENV_GAS_LIMIT = 0;
+try{
+  ENV_GAS_LIMIT = requireEnv("GAS_LIMIT")
+}catch(e){
+  ENV_GAS_LIMIT = 150
+}
+export const GAS_LIMIT = ENV_GAS_LIMIT;
 
 if (!/^(ether|token:0x[0-9a-fA-F]*)$/.test(FEE_TYPE)) {
   throw new Error(`FEE_TYPE has invalid format: "${FEE_TYPE}"`);

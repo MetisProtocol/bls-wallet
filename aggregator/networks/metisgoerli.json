@@ -1,0 +1,19 @@
+{
+  "parameters": {},
+  "addresses": {
+    "create2Deployer": "",
+    "precompileCostEstimator": "",
+    "blsLibrary": "",
+    "verificationGateway": "",
+    "blsExpander": "",
+    "utilities": "",
+    "testToken": ""
+  },
+  "auxiliary": {
+      "chainid": 599,
+      "domain": "",
+      "genesisBlock": 145330,
+      "deployedBy": "",
+      "version": ""
+  }
+}
