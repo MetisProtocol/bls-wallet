@@ -8,9 +8,10 @@
 import axios from 'axios';
 
 
-async function sendTrans(apiHost: string, method: string, data: any, httpMethod: string = 'post'){
+async function sendTrans(apiHost: string, method: string, data: any, httpMethod: string = 'post', token: string){
     const headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': token
     };
     let res;
     if (httpMethod === 'post') {

@@ -5,13 +5,13 @@ dotenv.config();
 
 const AggregatorUrl:any=process.env.AGGREGATOR_URL
 const AggregatorPort:any=process.env.AGGREGATOR_PROXY_PORT
+const VerificationGatewayUrl:any=process.env.VERIFICATION_GATEWAY
+const JsonRpcUrl:any=process.env.JSON_RPC_URL
 console.log("AGGREGATOR_URL:",process.env.AGGREGATOR_URL)
 runAggregatorProxy(
   AggregatorUrl,
-  async b => {
-    console.log('proxying bundle', JSON.stringify(b, null, 2));
-    return b;
-  },
+  VerificationGatewayUrl,
+  JsonRpcUrl,
   AggregatorPort,
   '0.0.0.0',
   () => {

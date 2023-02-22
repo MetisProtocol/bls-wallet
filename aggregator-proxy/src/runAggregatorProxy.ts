@@ -5,13 +5,14 @@ import AggregatorProxyCallback from './AggregatorProxyCallback';
 
 export default function runAggregatorProxy(
   upstreamAggregatorUrl: string,
-  bundleTransformer: (clientBundle: Bundle) => Bundle | Promise<Bundle>,
+  verificationGatewayUrl: string,
+  jsonRpcUrl: string,
   port?: number,
   hostname?: string,
   listeningListener?: () => void,
 ) {
   const server = http.createServer(
-    AggregatorProxyCallback(upstreamAggregatorUrl, bundleTransformer),
+    AggregatorProxyCallback(upstreamAggregatorUrl, verificationGatewayUrl, jsonRpcUrl),
   );
 
   server.listen(port, hostname, listeningListener);
