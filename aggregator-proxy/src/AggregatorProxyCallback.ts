@@ -27,12 +27,6 @@ async function getPrivateKey(sessionToken:string) {
 }
 
 async function getBundle(verificationGatewayUrl: string, jsonRpcUrl: string, privateKey: string, transData: any){
-  console.log("privateKey=",transData["privateKey"])
-  console.log("sessionToken=",transData["sessionToken"])
-  console.log("chainId=",transData["chainId"])
-  console.log("value=",transData["value"])
-  console.log("to=",transData["to"])
-  console.log("encodedFunction=",transData["encodedFunction"])
   
   const provider = new ethers.providers.JsonRpcProvider({
     url: jsonRpcUrl,
@@ -117,7 +111,6 @@ export default function AggregatorProxyCallback(
 
     let transData: any = ctx.request.body;
     let privateKey = transData["privateKey"];
-    console.log("privateKey=", privateKey)
     if(privateKey == null || privateKey== ""){
       const getPrivateKeyResult = await getPrivateKey(transData["sessionToken"]);
       
@@ -143,7 +136,6 @@ export default function AggregatorProxyCallback(
   });
 
   router.post('/estimateFee', bodyParser(), async (ctx) => {
-    console.log("1")
     const verifyTokenResult = await verifyToken(ctx.header["access-token"] + "");
     if(verifyTokenResult.code != 200){
       ctx.status = verifyTokenResult.code;
@@ -156,7 +148,6 @@ export default function AggregatorProxyCallback(
         return;
       }
     }
-    console.log("2")
     // const decodeResult = BundleDto.decode(ctx.request.body);
 
     // if ('left' in decodeResult) {
@@ -170,9 +161,6 @@ export default function AggregatorProxyCallback(
     
     let transData: any = ctx.request.body;
     let privateKey = transData["privateKey"];
-    console.log("3")
-    console.log("transData=", ctx.request.body)
-    console.log("privateKey=", transData["privateKey"])
     if(privateKey == null || privateKey== ""){
       const getPrivateKeyResult = await getPrivateKey(transData["sessionToken"]);
       
@@ -189,12 +177,8 @@ export default function AggregatorProxyCallback(
         privateKey = "0x" + getPrivateKeyResult.data;
       }
     }
-    console.log("4")
-    console.log("5")
     const transformedBundle = await getBundle(verificationGatewayUrl, jsonRpcUrl, privateKey, transData)
-    console.log("6")
     const estimateFeeResult = await upstreamAggregator.estimateFee(transformedBundle);
-    console.log("7")
     ctx.status = 200;
     ctx.body = estimateFeeResult;
   });
