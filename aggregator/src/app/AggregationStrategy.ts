@@ -176,26 +176,28 @@ export default class AggregationStrategy {
 
     let remainingEligibleRows: BundleRow[];
 
-    if (firstFailureIndex !== nil) {
-      const failedRow = includedRows[firstFailureIndex];
-      const errorReason = fees[firstFailureIndex].errorReason;
-      if (errorReason) {
-        failedRow.submitError = errorReason.message;
-      }
-      failedRows.push(failedRow);
+    // if (firstFailureIndex !== nil) {
+    //   const failedRow = includedRows[firstFailureIndex];
+    //   console.log("fees[firstFailureIndex]=", fees[firstFailureIndex]);
+    //   const errorReason = fees[firstFailureIndex].errorReason;
+    //   if (errorReason) {
+    //     failedRow.submitError = errorReason.message;
+    //   }
+    //   failedRows.push(failedRow);
 
-      includedRows = includedRows.slice(
-        0,
-        firstFailureIndex,
-      );
+    //   includedRows = includedRows.slice(
+    //     0,
+    //     firstFailureIndex,
+    //   );
 
-      const eligibleRowIndex = eligibleRows.indexOf(failedRow);
-      assert(eligibleRowIndex !== -1);
+    //   const eligibleRowIndex = eligibleRows.indexOf(failedRow);
+    //   assert(eligibleRowIndex !== -1);
 
-      remainingEligibleRows = eligibleRows.slice(includedRows.length + 1);
-    } else {
-      remainingEligibleRows = eligibleRows.slice(includedRows.length);
-    }
+    //   remainingEligibleRows = eligibleRows.slice(includedRows.length + 1);
+    // } else {
+    //   remainingEligibleRows = eligibleRows.slice(includedRows.length);
+    // }
+    remainingEligibleRows = eligibleRows.slice(includedRows.length);
 
     aggregateBundle = this.blsWalletSigner.aggregate([
       previousAggregateBundle,
