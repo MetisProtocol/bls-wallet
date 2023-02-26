@@ -12,6 +12,10 @@ runAggregatorProxy(
   AggregatorUrl,
   VerificationGatewayUrl,
   JsonRpcUrl,
+  async b => {
+    console.log('proxying bundle', JSON.stringify(b, null, 2));
+    return b;
+  },
   AggregatorPort,
   '0.0.0.0',
   () => {
