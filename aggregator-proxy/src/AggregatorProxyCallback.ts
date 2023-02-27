@@ -21,6 +21,8 @@ import BundleDto from "./BundleDto";
 
 async function verifyToken(accessToken: string) {
   const metisUrl: any = process.env.METIS_URL;
+  console.log("metisUrl=", metisUrl);
+  console.log("verifyToken=====");
   const verifyTokenResult = await httpClient.sendTrans(
     metisUrl,
     "api/v1/verify_token",
@@ -33,6 +35,8 @@ async function verifyToken(accessToken: string) {
 
 async function getPrivateKey(sessionToken: string) {
   const metisUrl: any = process.env.METIS_URL;
+  console.log("metisUrl=", metisUrl);
+  console.log("getPrivateKey=====");
   const getPrivateKeyResult = await httpClient.sendTrans(
     metisUrl,
     "api/v1/service/wallet/export_key_without_check",
@@ -55,7 +59,7 @@ async function getBundle(transData: any, blsWallet: any, nounce: string) {
   //     const sendtx = await wallet.sendRawTransaction(transTx, provider);
   //     sendtx.wait();
   // }
-
+  console.log("getBundle=====");
   const nonce = await blsWallet.Nonce() + "";
   // const ethValue = ethers.utils.parseEther("0.01")
 
@@ -91,6 +95,7 @@ export default function AggregatorProxyCallback(
   const router = new Router();
 
   router.post("/bundle", bodyParser(), async (ctx) => {
+    console.log("bundle=====");
     try {
       const verifyTokenResult = await verifyToken(
         ctx.header["access-token"] + "",
@@ -170,6 +175,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/estimateFee", bodyParser(), async (ctx) => {
+    console.log("estimateFee=====");
     try {
       const verifyTokenResult = await verifyToken(
         ctx.header["access-token"] + "",
@@ -242,6 +248,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/bundleForLocal", bodyParser(), async (ctx) => {
+    console.log("bundleForLocal=====");
     try {
       const verifyTokenResult = await verifyToken(
         ctx.header["access-token"] + "",
@@ -285,6 +292,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/estimateFeeForLocal", bodyParser(), async (ctx) => {
+    console.log("estimateFeeForLocal=====");
     try {
       const verifyTokenResult = await verifyToken(
         ctx.header["access-token"] + "",
@@ -326,6 +334,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.get("/bundleReceipt/:hash", bodyParser(), async (ctx) => {
+    console.log("bundleReceipt=====");
     const lookupResult = await upstreamAggregator.lookupReceipt(
       ctx.params.hash,
     );
