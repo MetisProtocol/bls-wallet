@@ -160,7 +160,9 @@ export default function AggregatorProxyCallback(
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
       );
+      console.log("estimateFee=====");
       const addResult = await upstreamAggregator.add(transformedBundle);
+      console.log("addbundle=====");
 
       ctx.status = 200;
       ctx.body = addResult;
@@ -238,6 +240,7 @@ export default function AggregatorProxyCallback(
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
       );
+      console.log("estimateFeeResult=====");
       ctx.status = 200;
       ctx.body = estimateFeeResult;
     } catch (error) {
@@ -279,7 +282,9 @@ export default function AggregatorProxyCallback(
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
       );
+      console.log("estimateFeeResult=====");
       const addResult = await upstreamAggregator.add(transformedBundle);
+      console.log("addbundle=====");
 
       ctx.status = 200;
       ctx.body = addResult;
@@ -323,6 +328,7 @@ export default function AggregatorProxyCallback(
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
       );
+      console.log("estimateFeeResult=====");
 
       ctx.status = 200;
       ctx.body = estimateFeeResult;
