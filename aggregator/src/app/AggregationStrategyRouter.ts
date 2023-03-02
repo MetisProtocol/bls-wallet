@@ -13,6 +13,7 @@ export default function AggregationStrategyRouter(
   router.post(
     "estimateFee",
     BundleHandler(async (ctx, bundle) => {
+      console.log("estimateFee=====");
       let result: AsyncReturnType<AggregationStrategy["estimateFee"]>;
 
       try {
