@@ -11,7 +11,6 @@ export default function BundleRouter(bundleService: BundleService) {
   router.post(
     "bundle",
     BundleHandler(async (ctx, bun) => {
-      console.log("bundle=====");
       const result = await bundleService.add(bun);
 
       if ("failures" in result) {
@@ -24,20 +23,20 @@ export default function BundleRouter(bundleService: BundleService) {
 
   router.get(
     "bundleReceipt/:hash",
-    async (ctx) => {
-      console.log("bundleReceipt=====");
-      const pendingBundle = await bundleService.lookupBundle(ctx.params.hash!);
-      const receipt = await bundleService.lookupReceipt(ctx.params.hash!);
+    (ctx) => {
+      const bundleRow = bundleService.lookupBundle(ctx.params.hash!);
 
-      if (receipt === nil) {
+      if (bundleRow?.receipt === nil) {
         ctx.response.status = 404;
+
         ctx.response.body = {
-          submitError: pendingBundle?.submitError,
+          submitError: bundleRow?.submitError,
         };
+
         return;
       }
 
-      ctx.response.body = receipt;
+      ctx.response.body = bundleService.receiptFromBundle(bundleRow);
     },
   );
 

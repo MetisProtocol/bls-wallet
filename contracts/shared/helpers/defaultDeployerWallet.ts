@@ -12,9 +12,8 @@ import { Wallet } from "ethers";
 export default function defaultDeployerWallet(
   ethers: HardhatEthersHelpers,
 ): Wallet {
-  // return Wallet.fromMnemonic(
-  //   `${process.env.DEPLOYER_MNEMONIC}`,
-  //   `m/44'/60'/0'/0/${process.env.DEPLOYER_SET_INDEX}`,
-  // ).connect(ethers.provider);
-  return new Wallet(process.env.DEPLOYER_PRIVATE).connect(ethers.provider);
+  return Wallet.fromMnemonic(
+    `${process.env.DEPLOYER_MNEMONIC}`,
+    `m/44'/60'/0'/0/${process.env.DEPLOYER_SET_INDEX}`,
+  ).connect(ethers.provider);
 }

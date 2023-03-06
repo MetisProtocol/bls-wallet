@@ -1,5 +1,7 @@
+/* eslint-disable camelcase */
 import { ethers, BigNumber, Signer, Bytes } from "ethers";
 import { Deferrable, hexlify, isBytes, RLP } from "ethers/lib/utils";
+import { AggregatorUtilities__factory } from "../typechain-types";
 
 import BlsProvider from "./BlsProvider";
 import BlsWalletWrapper from "./BlsWalletWrapper";
@@ -10,6 +12,7 @@ export const _constructorGuard = {};
 export default class BlsSigner extends Signer {
   override readonly provider: BlsProvider;
   readonly verificationGatewayAddress!: string;
+  readonly aggregatorUtilitiesAddress!: string;
   wallet!: BlsWalletWrapper;
   _index: number;
   _address: string;
@@ -25,11 +28,12 @@ export default class BlsSigner extends Signer {
     super();
     this.provider = provider;
     this.verificationGatewayAddress = this.provider.verificationGatewayAddress;
+    this.aggregatorUtilitiesAddress = this.provider.aggregatorUtilitiesAddress;
     this.initPromise = this.initializeWallet(privateKey);
 
     if (constructorGuard !== _constructorGuard) {
       throw new Error(
-        "do not call the BlsSigner constructor directly; use provider.getSigner.",
+        "do not call the BlsSigner constructor directly; use provider.getSigner",
       );
     }
 
@@ -45,7 +49,7 @@ export default class BlsSigner extends Signer {
       this._index = addressOrIndex;
     } else {
       throw new Error(`
-        invalid address or index. addressOrIndex: ${addressOrIndex}.`);
+        invalid address or index. addressOrIndex: ${addressOrIndex}`);
     }
   }
 
@@ -64,8 +68,14 @@ export default class BlsSigner extends Signer {
     await this.initPromise;
 
     if (!transaction.to) {
-      throw new TypeError("Transaction.to should be defined.");
+      throw new TypeError("Transaction.to should be defined");
     }
+
+    const nonce = await BlsWalletWrapper.Nonce(
+      this.wallet.PublicKey(),
+      this.verificationGatewayAddress,
+      this.provider,
+    );
 
     // TODO: bls-wallet #375 Add multi-action transactions to BlsProvider & BlsSigner
     const action: ActionData = {
@@ -74,13 +84,27 @@ export default class BlsSigner extends Signer {
       encodedFunction: transaction.data?.toString() ?? "0x",
     };
 
-    const nonce = await BlsWalletWrapper.Nonce(
-      this.wallet.PublicKey(),
-      this.verificationGatewayAddress,
+    const feeEstimate = await this.provider.estimateGas(transaction);
+
+    const aggregatorUtilitiesContract = AggregatorUtilities__factory.connect(
+      this.aggregatorUtilitiesAddress,
       this.provider,
     );
 
-    const bundle = this.wallet.sign({ nonce, actions: [action] });
+    const bundle = this.wallet.sign({
+      nonce,
+      actions: [
+        action,
+        {
+          ethValue: feeEstimate,
+          contractAddress: this.aggregatorUtilitiesAddress,
+          encodedFunction:
+            aggregatorUtilitiesContract.interface.encodeFunctionData(
+              "sendEthToTxOrigin",
+            ),
+        },
+      ],
+    });
     const result = await this.provider.aggregator.add(bundle);
 
     if ("failures" in result) {
@@ -122,7 +146,6 @@ export default class BlsSigner extends Signer {
       );
     }
 
-    // TODO: bls-wallet #412 Update values returned in bundle receipt to more closely match ethers transaction response
     return {
       hash,
       to: action.contractAddress,
@@ -140,6 +163,10 @@ export default class BlsSigner extends Signer {
     };
   }
 
+  /**
+   * This method passes calls through to the underlying node and allows users to unlock EOA accounts through this provider.
+   * The personal namespace is used to manage keys for ECDSA signing. BLS keys are not supported natively by execution clients.
+   */
   async unlock(password: string): Promise<boolean> {
     const provider = this.provider;
 
@@ -158,7 +185,7 @@ export default class BlsSigner extends Signer {
     await this.initPromise;
 
     if (!transaction.to) {
-      throw new TypeError("Transaction.to should be defined.");
+      throw new TypeError("Transaction.to should be defined");
     }
 
     const action: ActionData = {
@@ -173,7 +200,28 @@ export default class BlsSigner extends Signer {
       this.provider,
     );
 
-    const bundle = this.wallet.sign({ nonce, actions: [action] });
+    const feeEstimate = await this.provider.estimateGas(transaction);
+
+    const aggregatorUtilitiesContract = AggregatorUtilities__factory.connect(
+      this.aggregatorUtilitiesAddress,
+      this.provider,
+    );
+
+    const bundle = this.wallet.sign({
+      nonce,
+      actions: [
+        action,
+        {
+          ethValue: feeEstimate,
+          contractAddress: this.aggregatorUtilitiesAddress,
+          encodedFunction:
+            aggregatorUtilitiesContract.interface.encodeFunctionData(
+              "sendEthToTxOrigin",
+            ),
+        },
+      ],
+    });
+
     return JSON.stringify(bundleToDto(bundle));
   }
 
@@ -190,7 +238,7 @@ export default class BlsSigner extends Signer {
   }
 
   override connect(provider: ethers.providers.Provider): BlsSigner {
-    throw new Error("connect() is not implemented.");
+    throw new Error("cannot alter JSON-RPC Signer connection");
   }
 
   async _signTypedData(
@@ -198,7 +246,7 @@ export default class BlsSigner extends Signer {
     types: Record<string, Array<any>>,
     value: Record<string, any>,
   ): Promise<string> {
-    throw new Error("_signTypedData() is not implemented.");
+    throw new Error("_signTypedData() is not implemented");
   }
 
   connectUnchecked(): BlsSigner {
@@ -222,7 +270,7 @@ export default class BlsSigner extends Signer {
   }
 
   async _legacySignMessage(message: Bytes | string): Promise<string> {
-    throw new Error("_legacySignMessage() is not implemented.");
+    throw new Error("_legacySignMessage() is not implemented");
   }
 }
 

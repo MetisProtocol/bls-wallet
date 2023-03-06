@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write --unstable
+#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write
 
 import {
   AggregatorClient,
@@ -11,8 +11,8 @@ import {
 
 import * as env from "../test/env.ts";
 import AdminWallet from "../src/chain/AdminWallet.ts";
-import TestBlsWallets from "./helpers/TestBlsWallets.ts";
-import getNetworkConfig from "../src/helpers/getNetworkConfig.ts";
+import TestBlsWallet from "./helpers/TestBlsWallet.ts";
+import Range from "../src/helpers/Range.ts";
 
 const logStartTime = Date.now();
 
@@ -26,11 +26,17 @@ function log(...args: unknown[]) {
   console.log(RelativeTimestamp(), ...args);
 }
 
-const leadTarget = env.MAX_AGGREGATION_SIZE * env.MAX_UNCONFIRMED_AGGREGATIONS;
+// Note: This value is a guess and may require some experimentation for optimal
+// throughput. The size of a full aggregation used to be hardcoded in config,
+// but now that we use gas to limit the bundle size we don't know this value
+// upfront anymore.
+const fullAggregationSize = 100;
+
+const leadTarget = fullAggregationSize * env.MAX_UNCONFIRMED_AGGREGATIONS;
+
 const pollingInterval = 400;
 const sendWalletCount = 50;
 
-const { addresses } = await getNetworkConfig();
 
 const provider = new ethers.providers.JsonRpcProvider(env.RPC_URL);
 const adminWallet = AdminWallet(provider);
@@ -41,9 +47,8 @@ const client = new AggregatorClient(env.ORIGIN);
 
 log("Connecting/creating test wallets...");
 
-const [recvWallet, ...sendWallets] = await TestBlsWallets(
-  provider,
-  sendWalletCount + 1,
+const [recvWallet, ...sendWallets] = await Promise.all(
+  Range(sendWalletCount + 1).map((i) => TestBlsWallet(provider, i)),
 );
 
 log("Checking/minting test tokens...");

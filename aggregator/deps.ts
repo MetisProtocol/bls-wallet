@@ -27,15 +27,18 @@ export {
   Contract,
   ethers,
   Wallet,
-} from "https://esm.sh/ethers@5.5.4";
+} from "https://esm.sh/ethers@5.7.2";
 
-import { ethers } from "https://esm.sh/ethers@5.5.4";
+import { ethers } from "https://esm.sh/ethers@5.7.2";
 export type {
   BaseContract,
   BigNumberish,
   BytesLike,
-} from "https://esm.sh/ethers@5.5.4";
+} from "https://esm.sh/ethers@5.7.2";
 export const keccak256 = ethers.utils.keccak256;
+
+// Adding more accurate type information here (ethers uses Array<any>)
+export const shuffled: <T>(array: T[]) => T[] = ethers.utils.shuffled;
 
 export type {
   AggregatorUtilities,
@@ -46,43 +49,27 @@ export type {
   MockERC20,
   NetworkConfig,
   Operation,
+  OperationResultError,
   PublicKey,
   Signature,
   VerificationGateway,
-  OperationResultError,
-} from "https://esm.sh/bls-wallet-clients@0.8.1-758c7c4";
+} from "https://esm.sh/bls-wallet-clients@0.8.2-77f1638";
 
 export {
   Aggregator as AggregatorClient,
   AggregatorUtilities__factory,
   BlsWalletWrapper,
+  decodeError,
   ERC20__factory,
   getConfig,
   MockERC20__factory,
   VerificationGateway__factory,
-  decodeError,
-} from "https://esm.sh/bls-wallet-clients@0.8.1-758c7c4";
+} from "https://esm.sh/bls-wallet-clients@0.8.2-77f1638";
 
 // Workaround for esbuild's export-star bug
-import blsWalletClients from "https://esm.sh/bls-wallet-clients@0.8.1-758c7c4";
-const {
-  bundleFromDto,
-  bundleToDto,
-  initBlsWalletSigner,
-} = blsWalletClients;
+import blsWalletClients from "https://esm.sh/bls-wallet-clients@0.8.2-77f1638";
+const { bundleFromDto, bundleToDto, initBlsWalletSigner } = blsWalletClients;
 export { bundleFromDto, bundleToDto, initBlsWalletSigner };
 
-// Database dependencies
-export {
-  Constraint,
-  CreateTableMode,
-  DataType,
-  OrderByType,
-  QueryClient,
-  QueryTable,
-  unsketchify,
-} from "https://deno.land/x/postquery@v0.1.1/mod.ts";
-
-export type { TableOptions } from "https://deno.land/x/postquery@v0.1.1/mod.ts";
-
-export {SecretsManager} from "https://deno.land/x/aws_sdk@v3.32.0-1/client-secrets-manager/mod.ts";
+export * as sqlite from "https://deno.land/x/sqlite@v3.7.0/mod.ts";
+export { Semaphore } from "https://deno.land/x/semaphore@v1.1.2/mod.ts";
