@@ -25,7 +25,7 @@ async function verifyToken(accessToken: string) {
   console.log("verifyToken=====");
   const verifyTokenResult = await httpClient.sendTrans(
     metisUrl,
-    "api/v1/verify_token",
+    "/api/v1/verify_token",
     "token=" + accessToken,
     "get",
     "",
@@ -39,7 +39,7 @@ async function getPrivateKey(sessionToken: string) {
   console.log("getPrivateKey=====");
   const getPrivateKeyResult = await httpClient.sendTrans(
     metisUrl,
-    "api/v1/service/wallet/export_key_without_check",
+    "/api/v1/service/wallet/export_key_without_check",
     null,
     "post",
     sessionToken,
