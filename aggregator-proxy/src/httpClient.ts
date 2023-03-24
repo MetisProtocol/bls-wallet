@@ -19,6 +19,7 @@ async function sendTrans(apiHost: string, method: string, data: any, httpMethod:
     }else {
         res = await axios.get(apiHost + "/" + method + "?" + data, { headers });
     }
+    console.log("res=", res)
     if (res.status === 200) {
         return res.data;
     }

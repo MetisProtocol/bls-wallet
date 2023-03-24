@@ -170,6 +170,7 @@ export default function AggregatorProxyCallback(
       ctx.body.nonce = nounce;
       ctx.body.blsAddress = blsWallet.address;
     } catch (error) {
+      console.log("bundle error=", error);
       ctx.status = 500;
       ctx.body = "execute bundle error:" + error;
       return;
@@ -244,6 +245,7 @@ export default function AggregatorProxyCallback(
       ctx.status = 200;
       ctx.body = estimateFeeResult;
     } catch (error) {
+      console.log("estimateFee error=", error);
       ctx.status = 500;
       ctx.body = "execute bundle error:" + error;
       return;
@@ -290,6 +292,7 @@ export default function AggregatorProxyCallback(
       ctx.body = addResult;
       ctx.body.feeRequired = estimateFeeResult.feeRequired;
     } catch (error) {
+      console.log("bundleForLocal error=", error);
       ctx.status = 500;
       ctx.body = "execute bundle error:" + error;
       return;
@@ -333,6 +336,7 @@ export default function AggregatorProxyCallback(
       ctx.status = 200;
       ctx.body = estimateFeeResult;
     } catch (error) {
+      console.log("estimateFeeForLocal error=", error);
       ctx.status = 500;
       ctx.body = "execute bundle error:" + error;
       return;
