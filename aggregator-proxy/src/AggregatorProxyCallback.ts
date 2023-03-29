@@ -102,7 +102,7 @@ export default function AggregatorProxyCallback(
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
-        ctx.body = verifyTokenResult.message;
+        ctx.body = verifyTokenResult.message == null || verifyTokenResult.message == "" ? verifyTokenResult.msg : verifyTokenResult.message;
         return;
       } else {
         if (!verifyTokenResult.data.pass) {
@@ -133,7 +133,7 @@ export default function AggregatorProxyCallback(
 
         if (getPrivateKeyResult.code != 200) {
           ctx.status = getPrivateKeyResult.code;
-          ctx.body = getPrivateKeyResult.message;
+          ctx.body = getPrivateKeyResult.message == null || getPrivateKeyResult.message == "" ? getPrivateKeyResult.msg : getPrivateKeyResult.message;
           return;
         } else {
           if (getPrivateKeyResult.data == "") {
@@ -185,7 +185,7 @@ export default function AggregatorProxyCallback(
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
-        ctx.body = verifyTokenResult.message;
+        ctx.body = verifyTokenResult.message || verifyTokenResult.message == "" ? verifyTokenResult.msg : verifyTokenResult.message;
         return;
       } else {
         if (!verifyTokenResult.data.pass) {
@@ -214,7 +214,7 @@ export default function AggregatorProxyCallback(
 
         if (getPrivateKeyResult.code != 200) {
           ctx.status = getPrivateKeyResult.code;
-          ctx.body = getPrivateKeyResult.message;
+          ctx.body = getPrivateKeyResult.message || getPrivateKeyResult.message == "" ? getPrivateKeyResult.msg : getPrivateKeyResult.message;
           return;
         } else {
           if (getPrivateKeyResult.data == "") {
@@ -260,7 +260,7 @@ export default function AggregatorProxyCallback(
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
-        ctx.body = verifyTokenResult.message;
+        ctx.body = verifyTokenResult.message || verifyTokenResult.message == "" ? verifyTokenResult.msg : verifyTokenResult.message;
         return;
       } else {
         if (!verifyTokenResult.data.pass) {
@@ -307,7 +307,7 @@ export default function AggregatorProxyCallback(
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
-        ctx.body = verifyTokenResult.message;
+        ctx.body = verifyTokenResult.message || verifyTokenResult.message == "" ? verifyTokenResult.msg : verifyTokenResult.message;
         return;
       } else {
         if (!verifyTokenResult.data.pass) {
@@ -354,6 +354,90 @@ export default function AggregatorProxyCallback(
     } else {
       ctx.status = 200;
       ctx.body = lookupResult;
+    }
+  });
+
+  router.post("/getBlsAddress", bodyParser(), async (ctx) => {
+    console.log("getBlsAddress=====");
+    try {
+      let transData: any = ctx.request.body;
+      console.log("transData=", transData);
+      if (transData == null || transData == "") {
+        ctx.status = 403;
+        ctx.body = "param is empty";
+        return;
+      }
+      let privateKey = transData["privateKey"];
+      if (privateKey == null || privateKey == "" || privateKey == "0x") {
+        ctx.status = 403;
+        ctx.body = "param is empty";
+        return;
+      }
+      
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: jsonRpcUrl,
+        headers: { chainId: transData["chainId"] },
+      });
+      const blsWallet = await BlsWalletWrapper.connect(
+        privateKey,
+        verificationGatewayUrl,
+        provider,
+      );
+
+      ctx.status = 200;
+      ctx.body = {
+        blsAddress:blsWallet.address
+      };
+    } catch (error) {
+      console.log("getBlsAddress error=", error);
+      ctx.status = 500;
+      ctx.body = "getBlsAddress error:" + error;
+      return;
+    }
+  });
+
+  router.post("/bundleForBackend", bodyParser(), async (ctx) => {
+    console.log("bundleForBackend=====");
+    try {
+      let transData: any = ctx.request.body;
+      let privateKey = transData["privateKey"];
+      console.log("transData=", transData);
+      if (privateKey == null || privateKey == "" || privateKey == "0x") {
+        console.log("private is empty")
+        ctx.status = 403;
+        ctx.body = "permission denied";
+        return;
+      }
+
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: jsonRpcUrl,
+        headers: { chainId: transData["chainId"] },
+      });
+      const blsWallet = await BlsWalletWrapper.connect(
+        privateKey,
+        verificationGatewayUrl,
+        provider,
+      );
+      const nounce = await blsWallet.Nonce() + "";
+
+      const transformedBundle = await getBundle(transData, blsWallet, nounce);
+      const estimateFeeResult = await upstreamAggregator.estimateFee(
+        transformedBundle,
+      );
+      console.log("estimateFee=====");
+      const addResult = await upstreamAggregator.add(transformedBundle);
+      console.log("addbundle=====");
+
+      ctx.status = 200;
+      ctx.body = addResult;
+      ctx.body.feeRequired = estimateFeeResult.feeRequired;
+      ctx.body.nonce = nounce;
+      ctx.body.blsAddress = blsWallet.address;
+    } catch (error) {
+      console.log("bundleForBackend error=", error);
+      ctx.status = 500;
+      ctx.body = "execute bundle error:" + error;
+      return;
     }
   });
 
