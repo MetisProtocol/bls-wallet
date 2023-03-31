@@ -414,7 +414,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/getBlsAddress", bodyParser(), async (ctx) => {
-    console.log("=====getBlsAddress=====");
+    console.log("getBlsAddress=====");
     try {
       const transData: any = ctx.request.body;
       console.log("transData=", transData);
