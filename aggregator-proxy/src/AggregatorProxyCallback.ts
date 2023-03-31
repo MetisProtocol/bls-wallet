@@ -10,42 +10,20 @@ import {
   bundleFromDto,
 } from "bls-wallet-clients";
 import reporter from "io-ts-reporters";
-import httpClient from "./httpClient";
 import { ethers } from "ethers";
 import dotenv from "dotenv";
 dotenv.config();
+
+import httpExecute from "./httpExecute"
+import config from "./config"
 
 import BundleDto from "./BundleDto";
 
 (globalThis as any).fetch ??= fetch;
 
-async function verifyToken(accessToken: string) {
-  const metisUrl: any = process.env.METIS_URL;
-  console.log("metisUrl=", metisUrl);
-  console.log("verifyToken=====");
-  const verifyTokenResult = await httpClient.sendTrans(
-    metisUrl,
-    "api/v1/verify_token",
-    "token=" + accessToken,
-    "get",
-    "",
-  );
-  return verifyTokenResult;
-}
 
-async function getPrivateKey(sessionToken: string) {
-  const metisUrl: any = process.env.METIS_URL;
-  console.log("metisUrl=", metisUrl);
-  console.log("getPrivateKey=====");
-  const getPrivateKeyResult = await httpClient.sendTrans(
-    metisUrl,
-    "api/v1/service/wallet/export_key_without_check",
-    null,
-    "post",
-    sessionToken,
-  );
-  return getPrivateKeyResult;
-}
+
+
 
 async function getBundle(transData: any, blsWallet: any, nounce: string) {
   // if(blsWalletBalance < ethValue){
@@ -60,7 +38,7 @@ async function getBundle(transData: any, blsWallet: any, nounce: string) {
   //     sendtx.wait();
   // }
   console.log("getBundle=====");
-  const nonce = await blsWallet.Nonce() + "";
+  const nonce = String(await blsWallet.Nonce());
   // const ethValue = ethers.utils.parseEther("0.01")
 
   // All of the actions in a bundle are atomic, if one
@@ -73,7 +51,7 @@ async function getBundle(transData: any, blsWallet: any, nounce: string) {
     nonce,
     actions: [
       {
-        ethValue: transData["value"] + "",
+        ethValue: String(transData["value"]),
         contractAddress: transData["to"],
         encodedFunction: transData["encodedFunction"],
       },
@@ -83,22 +61,20 @@ async function getBundle(transData: any, blsWallet: any, nounce: string) {
 }
 
 export default function AggregatorProxyCallback(
-  upstreamAggregatorUrl: string,
-  verificationGatewayUrl: string,
-  jsonRpcUrl: string,
   bundleTransformer: (clientBundle: Bundle) => Bundle | Promise<Bundle>,
 ) {
   const app = new Koa();
   app.use(cors());
-  const upstreamAggregator = new Aggregator(upstreamAggregatorUrl);
 
   const router = new Router();
 
   router.post("/bundle", bodyParser(), async (ctx) => {
     console.log("bundle=====");
+    const transData: any = ctx.request.body;
+      console.log("transData=", transData);
     try {
-      const verifyTokenResult = await verifyToken(
-        ctx.header["access-token"] + "",
+      const verifyTokenResult = await httpExecute.verifyToken(
+        String(ctx.header["access-token"]),
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
@@ -112,22 +88,33 @@ export default function AggregatorProxyCallback(
         }
       }
 
-      // const decodeResult = BundleDto.decode(ctx.request.body);
+      
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+      
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
 
-      // if ('left' in decodeResult) {
-      //   ctx.status = 400;
-      //   ctx.body = reporter.report(decodeResult);
-      //   return;
-      // }
-
-      // const clientBundle = bundleFromDto(decodeResult.right);
-      // const transformedBundle = await bundleTransformer(clientBundle);
-
-      let transData: any = ctx.request.body;
       let privateKey = transData["privateKey"];
       console.log("transData=", transData);
-      if (privateKey == null || privateKey == "" || privateKey == "0x") {
-        const getPrivateKeyResult = await getPrivateKey(
+      if (privateKey == null || privateKey == "" || privateKey == undefined || privateKey == "0x") {
+        const getPrivateKeyResult = await httpExecute.getPrivateKey(
           transData["sessionToken"],
         );
 
@@ -154,7 +141,7 @@ export default function AggregatorProxyCallback(
         verificationGatewayUrl,
         provider,
       );
-      const nounce = await blsWallet.Nonce() + "";
+      const nounce = String(await blsWallet.Nonce());
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
       const estimateFeeResult = await upstreamAggregator.estimateFee(
@@ -180,8 +167,8 @@ export default function AggregatorProxyCallback(
   router.post("/estimateFee", bodyParser(), async (ctx) => {
     console.log("estimateFee=====");
     try {
-      const verifyTokenResult = await verifyToken(
-        ctx.header["access-token"] + "",
+      const verifyTokenResult = await httpExecute.verifyToken(
+        String(ctx.header["access-token"]),
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
@@ -194,21 +181,39 @@ export default function AggregatorProxyCallback(
           return;
         }
       }
-      // const decodeResult = BundleDto.decode(ctx.request.body);
+      
 
-      // if ('left' in decodeResult) {
-      //   ctx.status = 400;
-      //   ctx.body = reporter.report(decodeResult);
-      //   return;
-      // }
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+      
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: jsonRpcUrl,
+        headers: { chainId: String(chainId) },
+      });
 
-      // const clientBundle = bundleFromDto(decodeResult.right);
-      // const transformedBundle = await bundleTransformer(clientBundle);
 
       let transData: any = ctx.request.body;
       let privateKey = transData["privateKey"];
       if (privateKey == null || privateKey == "") {
-        const getPrivateKeyResult = await getPrivateKey(
+        const getPrivateKeyResult = await httpExecute.getPrivateKey(
           transData["sessionToken"],
         );
 
@@ -226,16 +231,12 @@ export default function AggregatorProxyCallback(
         }
       }
 
-      const provider = new ethers.providers.JsonRpcProvider({
-        url: jsonRpcUrl,
-        headers: { chainId: transData["chainId"] },
-      });
       const blsWallet = await BlsWalletWrapper.connect(
         privateKey,
         verificationGatewayUrl,
         provider,
       );
-      const nounce = await blsWallet.Nonce() + "";
+      const nounce = String(await blsWallet.Nonce());
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
       const estimateFeeResult = await upstreamAggregator.estimateFee(
@@ -255,8 +256,8 @@ export default function AggregatorProxyCallback(
   router.post("/bundleForLocal", bodyParser(), async (ctx) => {
     console.log("bundleForLocal=====");
     try {
-      const verifyTokenResult = await verifyToken(
-        ctx.header["access-token"] + "",
+      const verifyTokenResult = await httpExecute.verifyToken(
+        String(ctx.header["access-token"]),
       );
       if (verifyTokenResult.code != 200) {
         ctx.status = verifyTokenResult.code;
@@ -280,6 +281,30 @@ export default function AggregatorProxyCallback(
 
       const clientBundle = bundleFromDto(decodeResult.right);
       const transformedBundle = await bundleTransformer(clientBundle);
+
+
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+      
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
+
 
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
@@ -302,20 +327,6 @@ export default function AggregatorProxyCallback(
   router.post("/estimateFeeForLocal", bodyParser(), async (ctx) => {
     console.log("estimateFeeForLocal=====");
     try {
-      const verifyTokenResult = await verifyToken(
-        ctx.header["access-token"] + "",
-      );
-      if (verifyTokenResult.code != 200) {
-        ctx.status = verifyTokenResult.code;
-        ctx.body = verifyTokenResult.message || verifyTokenResult.message == "" ? verifyTokenResult.msg : verifyTokenResult.message;
-        return;
-      } else {
-        if (!verifyTokenResult.data.pass) {
-          ctx.status = 403;
-          ctx.body = "permission denied";
-          return;
-        }
-      }
 
       const decodeResult = BundleDto.decode(ctx.request.body);
 
@@ -327,6 +338,28 @@ export default function AggregatorProxyCallback(
 
       const clientBundle = bundleFromDto(decodeResult.right);
       const transformedBundle = await bundleTransformer(clientBundle);
+
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+      
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
 
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
@@ -345,6 +378,29 @@ export default function AggregatorProxyCallback(
 
   router.get("/bundleReceipt/:hash", bodyParser(), async (ctx) => {
     console.log("bundleReceipt=====");
+
+    const chainId = ctx.header["chain-id"];
+    if(chainId == null || chainId == "" || chainId == undefined){
+      console.log("chain-id is empty")
+      ctx.status = 500;
+      ctx.body = "chain-id is empty";
+      return;
+    }
+    const chainProperty = config.getChainProperty(String(chainId));
+    const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+    const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+    const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+    if(aggregatorUrl == null || aggregatorUrl == "" ||
+        verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+        jsonRpcUrl == null || jsonRpcUrl == ""){
+      console.log(`not support this chain [${chainId}]`)
+      ctx.status = 500;
+      ctx.body = `not support this chain [${chainId}]` ;
+      return;
+    }
+    
+    const upstreamAggregator = new Aggregator(aggregatorUrl);
+
     const lookupResult = await upstreamAggregator.lookupReceipt(
       ctx.params.hash,
     );
@@ -360,23 +416,54 @@ export default function AggregatorProxyCallback(
   router.post("/getBlsAddress", bodyParser(), async (ctx) => {
     console.log("getBlsAddress=====");
     try {
-      let transData: any = ctx.request.body;
+      const transData: any = ctx.request.body;
       console.log("transData=", transData);
       if (transData == null || transData == "") {
         ctx.status = 403;
         ctx.body = "param is empty";
         return;
       }
-      let privateKey = transData["privateKey"];
-      if (privateKey == null || privateKey == "" || privateKey == "0x") {
+
+      const awsSecretName = transData["awsSecretName"];
+      if (awsSecretName == null || awsSecretName == "" || awsSecretName == undefined) {
         ctx.status = 403;
         ctx.body = "param is empty";
         return;
       }
       
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+
+      let privateKey = String(await config.getAwsSecretValue(awsSecretName));
+      if (privateKey == null || privateKey == undefined || privateKey == "" || privateKey == "0x") {
+        ctx.status = 500;
+        ctx.body = "privateKey not existed";
+        return;
+      }
+      if(!privateKey.startsWith("0x") && !privateKey.startsWith("0X")){
+        privateKey = "0x" + privateKey;
+      }
+      
       const provider = new ethers.providers.JsonRpcProvider({
         url: jsonRpcUrl,
-        headers: { chainId: transData["chainId"] },
+        headers: { chainId: String(chainId) },
       });
       const blsWallet = await BlsWalletWrapper.connect(
         privateKey,
@@ -400,25 +487,57 @@ export default function AggregatorProxyCallback(
     console.log("bundleForBackend=====");
     try {
       let transData: any = ctx.request.body;
-      let privateKey = transData["privateKey"];
       console.log("transData=", transData);
-      if (privateKey == null || privateKey == "" || privateKey == "0x") {
-        console.log("private is empty")
-        ctx.status = 403;
-        ctx.body = "permission denied";
+
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.
+      getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
         return;
       }
 
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
+
+      const awsSecretName = transData["awsSecretName"];
+      if (awsSecretName == null || awsSecretName == "" || awsSecretName == undefined) {
+        ctx.status = 403;
+        ctx.body = "param is empty";
+        return;
+      }
+      let privateKey = String(await config.getAwsSecretValue(awsSecretName));
+      if (privateKey == null || privateKey == undefined || privateKey == "" || privateKey == "0x") {
+        ctx.status = 500;
+        ctx.body = "privateKey not existed";
+        return;
+      }
+      if(!privateKey.startsWith("0x") && !privateKey.startsWith("0X")){
+        privateKey = "0x" + privateKey;
+      }
+      
       const provider = new ethers.providers.JsonRpcProvider({
         url: jsonRpcUrl,
-        headers: { chainId: transData["chainId"] },
+        headers: { chainId: String(chainId) },
       });
       const blsWallet = await BlsWalletWrapper.connect(
         privateKey,
         verificationGatewayUrl,
         provider,
       );
-      const nounce = await blsWallet.Nonce() + "";
+      const nounce = String(await blsWallet.Nonce());
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
       const estimateFeeResult = await upstreamAggregator.estimateFee(
