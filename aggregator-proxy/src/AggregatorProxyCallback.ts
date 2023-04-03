@@ -560,6 +560,104 @@ export default function AggregatorProxyCallback(
     }
   });
 
+  router.post("/bundleForBackendWithoutEncode", bodyParser(), async (ctx) => {
+    console.log("bundleForBackendWithoutEncode=====");
+    try {
+      let transData: any = ctx.request.body;
+      console.log("transData=", transData);
+
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.
+      getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
+
+      const awsSecretName = transData["awsSecretName"];
+      const funcAbi = transData["funcAbi"];
+      const method = transData["method"];
+      const args = transData["args"];
+      if (awsSecretName == null || awsSecretName == "" || awsSecretName == undefined
+        || funcAbi == null || funcAbi == "" || funcAbi == undefined
+        || method == null || method == "" || method == undefined
+        || args == null || args == undefined) {
+        ctx.status = 403;
+        ctx.body = "param is empty";
+        return;
+      }
+      let privateKey = String(await config.getAwsSecretValue(awsSecretName));
+      if (privateKey == null || privateKey == undefined || privateKey == "" || privateKey == "0x") {
+        ctx.status = 500;
+        ctx.body = "privateKey not existed";
+        return;
+      }
+      if(!privateKey.startsWith("0x") && !privateKey.startsWith("0X")){
+        privateKey = "0x" + privateKey;
+      }
+      
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: jsonRpcUrl,
+        headers: { chainId: String(chainId) },
+      });
+      const blsWallet = await BlsWalletWrapper.connect(
+        privateKey,
+        verificationGatewayUrl,
+        provider,
+      );
+      const nounce = String(await blsWallet.Nonce());
+
+      ;
+      const abiFace = new ethers.utils.Interface([funcAbi]);
+      let transArgs = [];
+      if(args.length > 0){
+        for(var i = 0;i< args.length; i++){
+          if(args[i]["needParseUnits"]){
+            transArgs.push(ethers.utils.parseUnits(args[i]["value"], 18));
+          }else{
+            transArgs.push(args[i]["value"]);
+          }
+        }
+      }
+      transData["encodedFunction"] = abiFace.encodeFunctionData(method, transArgs);
+      console.log("transData[encodedFunction]=", transData["encodedFunction"])
+
+      const transformedBundle = await getBundle(transData, blsWallet, nounce);
+      const estimateFeeResult = await upstreamAggregator.estimateFee(
+        transformedBundle,
+      );
+      console.log("estimateFee=====");
+      const addResult = await upstreamAggregator.add(transformedBundle);
+      console.log("addbundle=====");
+
+      ctx.status = 200;
+      ctx.body = addResult;
+      ctx.body.feeRequired = estimateFeeResult.feeRequired;
+      ctx.body.nonce = nounce;
+      ctx.body.blsAddress = blsWallet.address;
+    } catch (error) {
+      console.log("bundleForBackend error=", error);
+      ctx.status = 500;
+      ctx.body = "execute bundle error:" + error;
+      return;
+    }
+  });
+
   router.get("/status", bodyParser(), async (ctx) => {
     ctx.status = 200;
     ctx.body = "ok";
