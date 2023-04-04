@@ -483,8 +483,8 @@ export default function AggregatorProxyCallback(
     }
   });
 
-  router.post("/bundleForBackend", bodyParser(), async (ctx) => {
-    console.log("bundleForBackend=====");
+  router.post("/bundleForBackendOld", bodyParser(), async (ctx) => {
+    console.log("bundleForBackendOld=====");
     try {
       let transData: any = ctx.request.body;
       console.log("transData=", transData);
@@ -560,8 +560,8 @@ export default function AggregatorProxyCallback(
     }
   });
 
-  router.post("/bundleForBackendWithoutEncode", bodyParser(), async (ctx) => {
-    console.log("bundleForBackendWithoutEncode=====");
+  router.post("/bundleForBackend", bodyParser(), async (ctx) => {
+    console.log("bundleForBackend=====");
     try {
       let transData: any = ctx.request.body;
       console.log("transData=", transData);
@@ -597,10 +597,51 @@ export default function AggregatorProxyCallback(
         || funcAbi == null || funcAbi == "" || funcAbi == undefined
         || method == null || method == "" || method == undefined
         || args == null || args == undefined) {
-        ctx.status = 403;
+        ctx.status = 500;
         ctx.body = "param is empty";
         return;
       }
+
+      let transArgs = [];
+      const abiParamsAttr = funcAbi.split('(');
+      console.log("abiParamsAttr=", abiParamsAttr)
+      if(abiParamsAttr.length < 2){
+        ctx.status = 500;
+        ctx.body = "funcAbi is error";
+        return;
+      }
+      const abiParamsAttr2 = abiParamsAttr[1].split(')');
+      console.log("abiParamsAttr2=", abiParamsAttr)
+      if(abiParamsAttr2.length < 2){
+        ctx.status = 500;
+        ctx.body = "funcAbi is error";
+        return;
+      }
+      const abiParamsAttr3 = abiParamsAttr2[0];
+      console.log("abiParamsAttr3=", abiParamsAttr3)
+      if(abiParamsAttr3.length > 0){
+        const abiParamsAttrs = abiParamsAttr3.split(",");
+        if(abiParamsAttrs.length != args.length){
+          ctx.status = 500;
+          ctx.body = "funcAbi not match with args";
+          return;
+        }
+        for(var i = 0;i< abiParamsAttrs.length; i++){
+          const paramType = abiParamsAttrs[i].trim().split(" ")[0];
+          if(paramType == "address"){
+            transArgs.push(args[i]["value"]);
+          }else if(paramType == "uint256"){
+            transArgs.push(ethers.utils.parseUnits(args[i]["value"], 18));
+          }else if(paramType == "bytes32"){
+            transArgs.push(ethers.utils.formatBytes32String(args[i]["value"]));
+          }
+        }
+      }
+      const abiFace = new ethers.utils.Interface([funcAbi]);
+      
+      transData["encodedFunction"] = abiFace.encodeFunctionData(method, transArgs);
+      console.log("transData[encodedFunction]=", transData["encodedFunction"])
+        
       let privateKey = String(await config.getAwsSecretValue(awsSecretName));
       if (privateKey == null || privateKey == undefined || privateKey == "" || privateKey == "0x") {
         ctx.status = 500;
@@ -623,19 +664,6 @@ export default function AggregatorProxyCallback(
       const nounce = String(await blsWallet.Nonce());
 
       ;
-      const abiFace = new ethers.utils.Interface([funcAbi]);
-      let transArgs = [];
-      if(args.length > 0){
-        for(var i = 0;i< args.length; i++){
-          if(args[i]["needParseUnits"]){
-            transArgs.push(ethers.utils.parseUnits(args[i]["value"], 18));
-          }else{
-            transArgs.push(args[i]["value"]);
-          }
-        }
-      }
-      transData["encodedFunction"] = abiFace.encodeFunctionData(method, transArgs);
-      console.log("transData[encodedFunction]=", transData["encodedFunction"])
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
       const estimateFeeResult = await upstreamAggregator.estimateFee(
