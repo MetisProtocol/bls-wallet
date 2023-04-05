@@ -634,6 +634,10 @@ export default function AggregatorProxyCallback(
             transArgs.push(ethers.utils.parseUnits(args[i]["value"], 18));
           }else if(paramType == "bytes32"){
             transArgs.push(ethers.utils.formatBytes32String(args[i]["value"]));
+          }else if(paramType == "bytes"){
+            transArgs.push(ethers.utils.toUtf8Bytes(args[i]["value"]));
+          }else{
+            transArgs.push(args[i]["value"]);
           }
         }
       }
