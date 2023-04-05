@@ -1,24 +1,42 @@
-#!/usr/bin/env -S deno run --unstable --allow-run --allow-read --allow-write --allow-env
+#!/usr/bin/env -S deno run --allow-run --allow-read --allow-write --allow-env
 
 import { dirname, parseArgs } from "../deps.ts";
 
 import * as shell from "./helpers/shell.ts";
 import repoDir from "../src/helpers/repoDir.ts";
-import dotEnvPath, { envName } from "../src/helpers/dotEnvPath.ts";
-import nil from "../src/helpers/nil.ts";
 
-const args = parseArgs(Deno.args);
+const parseArgsResult = parseArgs(Deno.args);
+
+const args = {
+  /** Whether to push the image to dockerhub. */
+  push: parseArgsResult["push"],
+
+  /** Override the image name. Default: aggregator. */
+  imageName: parseArgsResult["image-name"],
+
+  /** Only build the image, ie - don't also serialize the image to disk. */
+  imageOnly: parseArgsResult["image-only"],
+
+  /** Prefix all docker commands with sudo. */
+  sudoDocker: parseArgsResult["sudo-docker"],
+
+  /** Tag the image with latest as well as the default git-${sha}. */
+  alsoTagLatest: parseArgsResult["also-tag-latest"],
+};
 
 Deno.chdir(repoDir);
 const buildDir = `${repoDir}/build`;
 
 await ensureFreshBuildDir();
-await buildEnvironment();
 await copyTypescriptFiles();
 await buildDockerImage();
 await tarballTypescriptFiles();
 
-console.log("Aggregator build complete");
+if (args.push) {
+  await pushDockerImage();
+}
+
+console.log("\nAggregator build complete");
 
 async function allFiles() {
   return [
@@ -32,13 +50,7 @@ async function allFiles() {
   ];
 }
 
-async function shortContentHash(filePath: string) {
-  const contentHash = (await shell.Line("shasum", "-a", "256", filePath));
-
-  return contentHash.slice(0, 7);
-}
-
-async function BuildName() {
+async function Tag() {
   const commitShort = (await shell.Line("git", "rev-parse", "HEAD")).slice(
     0,
     7,
@@ -47,15 +59,10 @@ async function BuildName() {
   const isDirty =
     (await shell.Lines("git", "status", "--porcelain")).length > 0;
 
-  const envHashShort = await shortContentHash(`${buildDir}/.env`);
-
   return [
     "git",
     commitShort,
     ...(isDirty ? ["dirty"] : []),
-    "env",
-    envName,
-    envHashShort,
   ].join("-");
 }
 
@@ -72,45 +79,6 @@ async function ensureFreshBuildDir() {
   }
 
   await Deno.mkdir(buildDir);
-}
-
-async function buildEnvironment() {
-  const repoDotEnv = await Deno.readTextFile(dotEnvPath);
-
-  let networkConfigPaths: { repo: string; build: string } | nil = nil;
-  const buildDotEnvLines: string[] = [];
-
-  for (const line of repoDotEnv.split("\n")) {
-    let buildLine = line;
-
-    if (line.startsWith("NETWORK_CONFIG_PATH=")) {
-      const repoNetworkConfigPath = line.slice(
-        "NETWORK_CONFIG_PATH=".length,
-      );
-
-      const networkConfigHash = await shortContentHash(repoNetworkConfigPath);
-
-      networkConfigPaths = {
-        repo: repoNetworkConfigPath,
-        build: `networkConfig-${networkConfigHash}.json`,
-      };
-
-      // Need to replace this value with a build location because otherwise
-      // this file might not be included in the docker image
-      buildLine = `NETWORK_CONFIG_PATH=${networkConfigPaths.build}`;
-    }
-
-    buildDotEnvLines.push(buildLine);
-  }
-
-  if (networkConfigPaths !== nil) {
-    await Deno.copyFile(
-      networkConfigPaths.repo,
-      `${buildDir}/${networkConfigPaths.build}`,
-    );
-  }
-
-  await Deno.writeTextFile(`${buildDir}/.env`, buildDotEnvLines.join("\n"));
 }
 
 async function copyTypescriptFiles() {
@@ -138,9 +106,11 @@ async function tarballTypescriptFiles() {
 }
 
 async function buildDockerImage() {
-  const buildName = await BuildName();
+  const tag = await Tag();
+  const imageName = args.imageName ?? "aggregator";
+  const imageNameAndTag = `${imageName}:${tag}`;
 
-  const sudoDockerArg = args["sudo-docker"] === true ? ["sudo"] : [];
+  const sudoDockerArg = args.sudoDocker ? ["sudo"] : [];
 
   await shell.run(
     ...sudoDockerArg,
@@ -148,18 +118,35 @@ async function buildDockerImage() {
     "build",
     repoDir,
     "-t",
-    `aggregator:${buildName}`,
+    imageNameAndTag,
   );
 
-  const dockerImageName = `aggregator-${buildName}-docker-image`;
+  if (args.alsoTagLatest) {
+    await shell.run(
+      ...sudoDockerArg,
+      "docker",
+      "tag",
+      `${imageName}:${tag}`,
+      `${imageName}:latest`,
+    );
+  }
+
+  console.log("\nDocker image created:", imageNameAndTag);
+
+  if (args.imageName) {
+    return;
+  }
+
+  const dockerImageFileName = `${imageName}-${tag}-docker-image`;
+  const tarFilePath = `${repoDir}/build/${dockerImageFileName}.tar`;
 
   await shell.run(
     ...sudoDockerArg,
     "docker",
     "save",
     "--output",
-    `${repoDir}/build/${dockerImageName}.tar`,
-    `aggregator:${buildName}`,
+    tarFilePath,
+    imageNameAndTag,
   );
 
   if (sudoDockerArg.length > 0) {
@@ -170,12 +157,23 @@ async function buildDockerImage() {
       "sudo",
       "chown",
       username,
-      `${repoDir}/build/${dockerImageName}.tar`,
+      tarFilePath,
     );
   }
 
-  await shell.run(
-    "gzip",
-    `${repoDir}/build/${dockerImageName}.tar`,
-  );
+  await shell.run("gzip", tarFilePath);
+
+  console.log(`Docker image saved: ${tarFilePath}.gz`);
+}
+
+async function pushDockerImage() {
+  const tag = await Tag();
+  const imageName = args.imageName ?? "aggregator";
+  const imageNameAndTag = `${imageName}:${tag}`;
+
+  await shell.run("docker", "push", imageNameAndTag);
+
+  if (args.alsoTagLatest) {
+    await shell.run("docker", "push", `${imageName}:latest`);
+  }
 }

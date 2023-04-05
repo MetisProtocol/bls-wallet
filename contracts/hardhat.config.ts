@@ -6,6 +6,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
+import spies from "chai-spies";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import defaultDeployerWallets from "./shared/helpers/defaultDeployerWallet";
@@ -21,6 +22,13 @@ task("accounts", "Prints the list of accounts", async (_taskArgs, hre) => {
     console.log(account.address);
   }
 });
+
+task("generateMnemonic", "Generates and displays a random mnemonic").setAction(
+  async (_params, hre) => {
+    const wallet = hre.ethers.Wallet.createRandom();
+    console.log(wallet.mnemonic.phrase);
+  },
+);
 
 // Don't run this unless you really need to...
 task("privateKeys", "Prints the private keys for accounts")
@@ -79,6 +87,7 @@ task("sendEth", "Sends ETH to an address")
 // Do any needed pre-test setup here.
 task("test").setAction(async (_taskArgs, _hre, runSuper) => {
   chai.use(chaiAsPromised);
+  chai.use(spies);
   await runSuper();
 });
 
@@ -129,17 +138,9 @@ const config: HardhatUserConfig = {
     gethDev: {
       url: `http://localhost:8545`,
       accounts,
-      gasPrice: 0,
-    },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      accounts,
-    },
-    arbitrum_testnet: {
-      // chainId: 421611
-      url: process.env.ARBITRUM_TESTNET_URL,
-      accounts,
-      gasPrice: 1408857682, // 287938372,
+      // issue: https://github.com/NomicFoundation/hardhat/issues/3136
+      // workaround: https://github.com/NomicFoundation/hardhat/issues/2672#issuecomment-1167409582
+      timeout: 100_000,
     },
     arbitrum_goerli: {
       // chainId: 421613
@@ -151,6 +152,10 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_URL,
       accounts,
       gasPrice: 700000000,
+    },
+    optimism_goerli: {
+      url: process.env.OPTIMISM_GOERLI_URL,
+      accounts,
     },
     // optimistic_local: {
     //   url: process.env.OPTIMISM_LOCAL_URL,

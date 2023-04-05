@@ -1,13 +1,10 @@
-#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write --unstable
+#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write
 
 import { delay, ethers, MockERC20__factory } from "../deps.ts";
 
 import EthereumService from "../src/app/EthereumService.ts";
 import * as env from "../test/env.ts";
-import TestBlsWallets from "./helpers/TestBlsWallets.ts";
-import getNetworkConfig from "../src/helpers/getNetworkConfig.ts";
-
-const { addresses } = await getNetworkConfig();
+import TestBlsWallet from "./helpers/TestBlsWallet.ts";
 
 const provider = new ethers.providers.JsonRpcProvider(env.RPC_URL);
 const ethereumService = await EthereumService.create(
@@ -20,7 +17,7 @@ const ethereumService = await EthereumService.create(
 );
 
 const testErc20 = MockERC20__factory.connect(env.ADDRESS.TEST_TOKEN, provider);
-const [wallet] = await TestBlsWallets(provider, 1);
+const wallet = await TestBlsWallet(provider);
 const startBalance = await testErc20.balanceOf(wallet.address);
 
 const bundle = wallet.sign({
@@ -47,7 +44,7 @@ console.log("Sending via ethereumService");
 })();
 
 while (true) {
-  const balance = (await testErc20.balanceOf(wallet.address));
+  const balance = await testErc20.balanceOf(wallet.address);
 
   console.log({
     startBalance: startBalance.toString(),

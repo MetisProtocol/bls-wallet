@@ -5,7 +5,7 @@ import {
   Bundle,
   delay,
   ethers,
-  QueryClient,
+  Semaphore,
 } from "../../deps.ts";
 
 import { IClock } from "../helpers/Clock.ts";
@@ -19,17 +19,18 @@ import runQueryGroup from "./runQueryGroup.ts";
 import EthereumService from "./EthereumService.ts";
 import AppEvent from "./AppEvent.ts";
 import BundleTable, { BundleRow, makeHash } from "./BundleTable.ts";
-import countActions from "./helpers/countActions.ts";
 import plus from "./helpers/plus.ts";
 import AggregationStrategy from "./AggregationStrategy.ts";
 import nil from "../helpers/nil.ts";
 
-export type AddBundleResponse = { hash: string } | { failures: TransactionFailure[] };
+export type AddBundleResponse = { hash: string } | {
+  failures: TransactionFailure[];
+};
 
 export default class BundleService {
   static defaultConfig = {
     bundleQueryLimit: env.BUNDLE_QUERY_LIMIT,
-    maxAggregationSize: env.MAX_AGGREGATION_SIZE,
+    breakevenOperationCount: env.BREAKEVEN_OPERATION_COUNT,
     maxAggregationDelayMillis: env.MAX_AGGREGATION_DELAY_MILLIS,
     maxUnconfirmedAggregations: env.MAX_UNCONFIRMED_AGGREGATIONS,
     maxEligibilityDelay: env.MAX_ELIGIBILITY_DELAY,
@@ -39,12 +40,7 @@ export default class BundleService {
   unconfirmedActionCount = 0;
   unconfirmedRowIds = new Set<number>();
 
-  // TODO (merge-ok) use database table in the future to persist
-  confirmedBundles = new Map<string, {
-    bundle: Bundle,
-    receipt: ethers.ContractReceipt,
-  }>();
-
+  submissionSemaphore: Semaphore;
   submissionTimer: SubmissionTimer;
   submissionsInProgress = 0;
 
@@ -55,7 +51,6 @@ export default class BundleService {
   constructor(
     public emit: (evt: AppEvent) => void,
     public clock: IClock,
-    public queryClient: QueryClient,
     public bundleTableMutex: Mutex,
     public bundleTable: BundleTable,
     public blsWalletSigner: BlsWalletSigner,
@@ -63,25 +58,24 @@ export default class BundleService {
     public aggregationStrategy: AggregationStrategy,
     public config = BundleService.defaultConfig,
   ) {
+    this.submissionSemaphore = new Semaphore(config.maxUnconfirmedAggregations);
+
     this.submissionTimer = new SubmissionTimer(
       clock,
       config.maxAggregationDelayMillis,
       () => this.runSubmission(),
     );
 
-    (async () => {
-      await delay(100);
-
-      while (!this.stopping) {
-        this.tryAggregating();
-        // TODO (merge-ok): Stop if there aren't any bundles?
-        await this.ethereumService.waitForNextBlock();
-      }
-    })();
+    this.ethereumService.provider.on("block", this.handleBlock);
   }
+
+  handleBlock = () => {
+    this.addTask(() => this.tryAggregating());
+  };
 
   async stop() {
     this.stopping = true;
+    this.ethereumService.provider.off("block", this.handleBlock);
     await Promise.all(Array.from(this.pendingTaskPromises));
     this.stopped = true;
   }
@@ -109,19 +103,19 @@ export default class BundleService {
       return;
     }
 
-    const eligibleRows = await this.bundleTable.findEligible(
+    const eligibleRows = this.bundleTable.findEligible(
       await this.ethereumService.BlockNumber(),
       this.config.bundleQueryLimit,
     );
 
-    const actionCount = eligibleRows
+    const opCount = eligibleRows
       .filter((r) => !this.unconfirmedRowIds.has(r.id))
-      .map((r) => countActions(r.bundle))
+      .map((r) => r.bundle.operations.length)
       .reduce(plus, 0);
 
-    if (actionCount >= this.config.maxAggregationSize) {
+    if (opCount >= this.config.breakevenOperationCount) {
       this.submissionTimer.trigger();
-    } else if (actionCount > 0) {
+    } else if (opCount > 0) {
       this.submissionTimer.notifyActive();
     } else {
       this.submissionTimer.clear();
@@ -131,8 +125,8 @@ export default class BundleService {
   runQueryGroup<T>(body: () => Promise<T>): Promise<T> {
     return runQueryGroup(
       this.emit,
+      (sql) => this.bundleTable.dbQuery(sql),
       this.bundleTableMutex,
-      this.queryClient,
       body,
     );
   }
@@ -153,9 +147,11 @@ export default class BundleService {
     }
 
     const walletAddresses = await Promise.all(bundle.senderPublicKeys.map(
-      (pubKey) => BlsWalletWrapper.AddressFromPublicKey(
-        pubKey, this.ethereumService.verificationGateway
-      )
+      (pubKey) =>
+        BlsWalletWrapper.AddressFromPublicKey(
+          pubKey,
+          this.ethereumService.verificationGateway,
+        ),
     ));
 
     const failures: TransactionFailure[] = [];
@@ -164,7 +160,7 @@ export default class BundleService {
       const signedCorrectly = this.blsWalletSigner.verify(bundle, walletAddr);
       if (!signedCorrectly) {
         failures.push({
-        type: "invalid-signature",
+          type: "invalid-signature",
           description: `invalid signature for wallet address ${walletAddr}`,
         });
       }
@@ -179,7 +175,8 @@ export default class BundleService {
     return await this.runQueryGroup(async () => {
       const hash = makeHash();
 
-      await this.bundleTable.add({
+      this.bundleTable.add({
+        status: "pending",
         hash,
         bundle,
         eligibleAfter: await this.ethereumService.BlockNumber(),
@@ -204,33 +201,42 @@ export default class BundleService {
     return this.bundleTable.findBundle(hash);
   }
 
-  // TODO (merge-ok) Remove lint ignore when this hits db
-  // deno-lint-ignore require-await
-  async lookupReceipt(hash: string) {
-    const confirmation = this.confirmedBundles.get(hash);
-
-    if (!confirmation) {
+  receiptFromBundle(bundle: BundleRow) {
+    if (!bundle.receipt) {
       return nil;
     }
 
-    const receipt = confirmation.receipt;
+    const { receipt, hash } = bundle;
 
     return {
-      transactionIndex: receipt.transactionIndex,
-      transactionHash: receipt.transactionHash,
       bundleHash: hash,
+      to: receipt.to,
+      from: receipt.from,
+      contractAddress: receipt.contractAddress,
+      transactionIndex: receipt.transactionIndex,
+      root: receipt.root,
+      gasUsed: receipt.gasUsed,
+      logsBloom: receipt.logsBloom,
       blockHash: receipt.blockHash,
+      transactionHash: receipt.transactionHash,
+      logs: receipt.logs,
       blockNumber: receipt.blockNumber,
+      confirmations: receipt.confirmations,
+      cumulativeGasUsed: receipt.cumulativeGasUsed,
+      effectiveGasPrice: receipt.effectiveGasPrice,
+      byzantium: receipt.byzantium,
+      type: receipt.type,
+      status: receipt.status,
     };
   }
 
   async runSubmission() {
     this.submissionsInProgress++;
 
-    const submissionResult = await this.runQueryGroup(async () => {
+    const bundleSubmitted = await this.runQueryGroup(async () => {
       const currentBlockNumber = await this.ethereumService.BlockNumber();
 
-      let eligibleRows = await this.bundleTable.findEligible(
+      let eligibleRows = this.bundleTable.findEligible(
         currentBlockNumber,
         this.config.bundleQueryLimit,
       );
@@ -240,38 +246,80 @@ export default class BundleService {
         (row) => !this.unconfirmedRowIds.has(row.id),
       );
 
-      const { aggregateBundle, includedRows, failedRows } = await this
+      this.emit({
+        type: "running-strategy",
+        data: {
+          eligibleRows: eligibleRows.length,
+        },
+      });
+
+      const {
+        aggregateBundle,
+        includedRows,
+        bundleOverheadCost,
+        expectedFee,
+        expectedMaxCost,
+        failedRows,
+      } = await this
         .aggregationStrategy.run(eligibleRows);
 
+      this.emit({
+        type: "completed-strategy",
+        data: {
+          includedRows: includedRows.length,
+          bundleOverheadCost: ethers.utils.formatEther(bundleOverheadCost),
+          expectedFee: ethers.utils.formatEther(expectedFee),
+          expectedMaxCost: ethers.utils.formatEther(expectedMaxCost),
+        },
+      });
+
       for (const failedRow of failedRows) {
-        await this.handleFailedRow(failedRow, currentBlockNumber);
+        this.emit({
+          type: "failed-row",
+          data: {
+            publicKeyShorts: failedRow.bundle.senderPublicKeys.map(
+              toShortPublicKey,
+            ),
+            submitError: failedRow.submitError,
+          },
+        });
+
+        this.handleFailedRow(failedRow, currentBlockNumber);
       }
 
       if (!aggregateBundle || includedRows.length === 0) {
-        return;
+        return false;
       }
 
       await this.submitAggregateBundle(
         aggregateBundle,
         includedRows,
+        expectedFee,
+        expectedMaxCost,
       );
+
+      return true;
     });
 
     this.submissionsInProgress--;
-    this.addTask(() => this.tryAggregating());
 
-    return submissionResult;
+    if (bundleSubmitted) {
+      this.addTask(() => this.tryAggregating());
+    }
   }
 
-  async handleFailedRow(row: BundleRow, currentBlockNumber: BigNumber) {
+  handleFailedRow(row: BundleRow, currentBlockNumber: BigNumber) {
     if (row.nextEligibilityDelay.lte(this.config.maxEligibilityDelay)) {
-      await this.bundleTable.update({
+      this.bundleTable.update({
         ...row,
         eligibleAfter: currentBlockNumber.add(row.nextEligibilityDelay),
         nextEligibilityDelay: row.nextEligibilityDelay.mul(2),
       });
     } else {
-      await this.bundleTable.remove(row);
+      this.bundleTable.update({
+        ...row,
+        status: "failed",
+      });
     }
 
     this.unconfirmedRowIds.delete(row.id);
@@ -280,23 +328,10 @@ export default class BundleService {
   async submitAggregateBundle(
     aggregateBundle: Bundle,
     includedRows: BundleRow[],
+    expectedFee: BigNumber,
+    expectedMaxCost: BigNumber,
   ) {
-    const maxUnconfirmedActions = (
-      this.config.maxUnconfirmedAggregations *
-      this.config.maxAggregationSize
-    );
-
-    const actionCount = countActions(aggregateBundle);
-
-    while (
-      this.unconfirmedActionCount + actionCount > maxUnconfirmedActions
-    ) {
-      // FIXME (merge-ok): Polling
-      this.emit({ type: "waiting-unconfirmed-space" });
-      await delay(1000);
-    }
-
-    this.unconfirmedActionCount += actionCount;
+    const releaseSemaphore = await this.submissionSemaphore.acquire();
     this.unconfirmedBundles.add(aggregateBundle);
 
     for (const row of includedRows) {
@@ -305,18 +340,31 @@ export default class BundleService {
 
     this.addTask(async () => {
       try {
+        const balanceBefore = await this.ethereumService.wallet.getBalance();
+
         const receipt = await this.ethereumService.submitBundle(
           aggregateBundle,
           Infinity,
           300,
         );
 
+        const balanceAfter = await this.ethereumService.wallet.getBalance();
+
         for (const row of includedRows) {
-          this.confirmedBundles.set(row.hash, {
-            bundle: row.bundle,
+          this.bundleTable.update({
+            ...row,
             receipt,
+            status: "confirmed",
           });
         }
+
+        const profit = balanceAfter.sub(balanceBefore);
+
+        /** What we paid to process the bundle */
+        const cost = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+
+        /** Fees collected from users */
+        const actualFee = profit.add(cost);
 
         this.emit({
           type: "submission-confirmed",
@@ -324,17 +372,21 @@ export default class BundleService {
             hash: receipt.transactionHash,
             bundleHashes: includedRows.map((row) => row.hash),
             blockNumber: receipt.blockNumber,
+            profit: ethers.utils.formatEther(profit),
+            cost: ethers.utils.formatEther(cost),
+            expectedMaxCost: ethers.utils.formatEther(expectedMaxCost),
+            actualFee: ethers.utils.formatEther(actualFee),
+            expectedFee: ethers.utils.formatEther(expectedFee),
           },
         });
-
-        await this.bundleTable.remove(...includedRows);
       } finally {
-        this.unconfirmedActionCount -= actionCount;
         this.unconfirmedBundles.delete(aggregateBundle);
 
         for (const row of includedRows) {
           this.unconfirmedRowIds.delete(row.id);
         }
+
+        releaseSemaphore();
       }
     });
   }

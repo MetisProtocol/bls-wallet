@@ -1,4 +1,5 @@
-import fetch from "node-fetch";
+import nodeFetch from "node-fetch";
+import { ContractReceipt } from "ethers";
 import { Bundle, bundleToDto } from "./signer";
 
 // TODO: Rename to BundleFailure?
@@ -38,13 +39,17 @@ export type BundleReceiptError = {
   submitError: string | undefined;
 };
 
-export type BundleReceipt = {
-  transactionIndex: number;
-  transactionHash: string;
+/**
+ * The BLS Wallet specific values in a {@link BundleReceipt}.
+ */
+export type BlsBundleReceipt = {
   bundleHash: string;
-  blockHash: string;
-  blockNumber: number;
 };
+
+/**
+ * The bundle receipt returned from a BLS Wallet Aggregator instance. It is a combination of an ethers {@link ContractReceipt} and a {@link BlsBundleReceipt} type.
+ */
+export type BundleReceipt = ContractReceipt & BlsBundleReceipt;
 
 /**
  * Client used to interact with a BLS Wallet Aggregator instance
@@ -68,7 +73,7 @@ export default class Aggregator {
 
     this.origin = new URL(url).origin;
     // Prefer runtime's imeplmentation of fetch over node-fetch
-    this.fetchImpl = globalThis.fetch ?? fetch;
+    this.fetchImpl = "fetch" in globalThis ? fetch.bind(globalThis) : nodeFetch;
   }
 
   /**
@@ -145,8 +150,12 @@ export default class Aggregator {
 
   private async jsonGet<T>(path: string): Promise<T | undefined> {
     const resp = await this.fetchImpl(path);
-    const json = await resp.json();
+    const respText = await resp.text();
+    if (!respText) {
+      return undefined;
+    }
 
+    const json = JSON.parse(respText);
     const isValidNonEmptyJson = json && Object.keys(json).length;
     if (isValidNonEmptyJson) {
       return json as T;

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write --unstable
+#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write
 
 import {
   AggregatorClient,
@@ -8,7 +8,6 @@ import {
 } from "../deps.ts";
 
 import assert from "../src/helpers/assert.ts";
-import getNetworkConfig from "../src/helpers/getNetworkConfig.ts";
 import nil from "../src/helpers/nil.ts";
 import Rng from "../src/helpers/Rng.ts";
 import * as env from "../test/env.ts";
@@ -31,7 +30,6 @@ if (!seed) {
 
 const privateKey = rng.seed(`${seed}`).address();
 
-const { addresses } = await getNetworkConfig();
 
 const wallet = await BlsWalletWrapper.connect(
   privateKey,

@@ -12,8 +12,10 @@
     "check-ts": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "test": "hardhat test",
-    "test-clients": "hardhat test ./clients-tests/*",
-    "premerge": "rm -rf artifacts cache typechain-types && hardhat compile && lint && check-ts && yarn --cwd clients premerge && test"
+    "test-integration": "hardhat test --network gethDev ./test-integration/*",
+    "premerge": "rm -rf artifacts cache typechain-types && hardhat compile && lint && check-ts && yarn --cwd clients premerge && test",
+    "start": "./scripts/start.sh",
+    "start-hardhat": "./scripts/start-hardhat.sh"
   },
   "author": "James Zaki",
   "license": "MIT",
@@ -21,6 +23,7 @@
     "@openzeppelin/contracts": "^4.7.3"
   },
   "devDependencies": {
+    "@ethereumjs/tx": "^4.0.1",
     "@nomiclabs/hardhat-ethers": "^2.2.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.2",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
@@ -33,6 +36,7 @@
     "@types/node": "^18.11.8",
     "@typescript-eslint/eslint-plugin": "^5.42.0",
     "@typescript-eslint/parser": "^5.42.0",
+    "alea": "^1.0.1",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "chai-spies": "^1.0.0",
@@ -57,7 +61,6 @@
     "ts-node": "^10.9.1",
     "typechain": "^8.1.0",
     "typescript": "^4.8.4",
-    "web3": "^1.8.0",
-    "web3-utils": "^1.8.0"
+    "web3": "^1.8.1"
   }
 }

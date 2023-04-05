@@ -7,12 +7,11 @@ import {
   MockERC20,
   MockERC20__factory,
   NetworkConfig,
-  QueryClient,
+  sqlite,
 } from "../../deps.ts";
 
 import testRng from "./testRng.ts";
 import EthereumService from "../../src/app/EthereumService.ts";
-import createQueryClient from "../../src/app/createQueryClient.ts";
 import Range from "../../src/helpers/Range.ts";
 import Mutex from "../../src/helpers/Mutex.ts";
 import TestClock from "./TestClock.ts";
@@ -23,31 +22,31 @@ import nil, { isNotNil } from "../../src/helpers/nil.ts";
 import getNetworkConfig from "../../src/helpers/getNetworkConfig.ts";
 import BundleService from "../../src/app/BundleService.ts";
 import BundleTable, { BundleRow } from "../../src/app/BundleTable.ts";
-import AggregationStrategy from "../../src/app/AggregationStrategy.ts";
+import AggregationStrategy, {
+  AggregationStrategyConfig,
+} from "../../src/app/AggregationStrategy.ts";
 
 // deno-lint-ignore no-explicit-any
 type ExplicitAny = any;
 
-let existingClient: QueryClient | nil = nil;
-
 export const bundleServiceDefaultTestConfig:
   typeof BundleService.defaultConfig = {
     bundleQueryLimit: 100,
-    maxAggregationSize: 12,
+    breakevenOperationCount: 4.5,
     maxAggregationDelayMillis: 5000,
     maxUnconfirmedAggregations: 3,
     maxEligibilityDelay: 300,
   };
 
-export const aggregationStrategyDefaultTestConfig:
-  typeof AggregationStrategy.defaultConfig = {
-    maxAggregationSize: 12,
-    fees: {
-      type: "ether",
-      perGas: BigNumber.from(0),
-      perByte: BigNumber.from(0),
-    },
-  };
+export const aggregationStrategyDefaultTestConfig: AggregationStrategyConfig = {
+  maxGasPerBundle: 1500000,
+  fees: {
+    type: "ether",
+    allowLosses: true,
+    breakevenOperationCount: 4.5,
+  },
+  bundleCheckingConcurrency: 8,
+};
 
 export default class Fixture {
   static test(
@@ -78,8 +77,8 @@ export default class Fixture {
 
     const ethereumService = await EthereumService.create(
       (evt) => fx.emit(evt),
-      netCfg.addresses.verificationGateway,
-      netCfg.addresses.utilities,
+      env.ADDRESS.VERIFICATION_GATEWAY,
+      env.ADDRESS.UTILITIES,
       env.PRIVATE_KEY_AGG,
     );
 
@@ -133,7 +132,7 @@ export default class Fixture {
     public networkConfig: NetworkConfig,
   ) {
     this.testErc20 = MockERC20__factory.connect(
-      this.networkConfig.addresses.testToken,
+      env.ADDRESS.TEST_TOKEN,
       this.ethereumService.wallet.provider,
     );
 
@@ -147,33 +146,36 @@ export default class Fixture {
     return this.rng.seed("blsPrivateKey", ...extraSeeds).address();
   }
 
-  async createBundleService(
+  createBundleService(
     config = bundleServiceDefaultTestConfig,
     aggregationStrategyConfig = aggregationStrategyDefaultTestConfig,
   ) {
-    const suffix = this.rng.seed("table-name-suffix").address().slice(2, 12);
-    existingClient = createQueryClient(this.emit, existingClient);
-    const queryClient = existingClient;
-
     const tablesMutex = new Mutex();
 
-    const tableName = `bundles_test_${suffix}`;
-    const table = await BundleTable.createFresh(queryClient, tableName);
+    const table = new BundleTable(
+      new sqlite.DB(),
+      (sql, params) => {
+        if (env.LOG_QUERIES) {
+          this.emit({
+            type: "db-query",
+            data: { sql, params },
+          });
+        }
+      },
+    );
 
-    const aggregationStrategy = (
+    const aggregationStrategy =
       aggregationStrategyConfig === aggregationStrategyDefaultTestConfig
         ? this.aggregationStrategy
         : new AggregationStrategy(
           this.blsWalletSigner,
           this.ethereumService,
           aggregationStrategyConfig,
-        )
-    );
+        );
 
     const bundleService = new BundleService(
       this.emit,
       this.clock,
-      queryClient,
       tablesMutex,
       table,
       this.blsWalletSigner,
@@ -191,16 +193,18 @@ export default class Fixture {
   }
 
   async mine(numBlocks: number): Promise<void> {
-    const provider = this.ethereumService.wallet
-      .provider as ethers.providers.JsonRpcProvider;
     for (let i = 0; i < numBlocks; i++) {
-      await provider.send("evm_mine", []);
+      // Sending 0 eth instead of using evm_mine since geth doesn't support it.
+      await (await this.adminWallet.sendTransaction({
+        to: this.adminWallet.address,
+        value: 0,
+      })).wait();
     }
   }
 
   allBundles(
     bundleService: BundleService,
-  ): Promise<BundleRow[]> {
+  ): BundleRow[] {
     return bundleService.bundleTable.all();
   }
 
@@ -228,7 +232,7 @@ export default class Fixture {
     for (const i of Range(count)) {
       const wallet = await BlsWalletWrapper.connect(
         this.createBlsPrivateKey(`${i}`, ...extraSeeds),
-        this.networkConfig.addresses.verificationGateway,
+        env.ADDRESS.VERIFICATION_GATEWAY,
         this.adminWallet.provider,
       );
 

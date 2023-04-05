@@ -1,13 +1,12 @@
-#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write --unstable
+#!/usr/bin/env -S deno run --allow-net --allow-env --allow-read --allow-write
 
 import { ethers } from "../deps.ts";
 
 import * as env from "../src/env.ts";
-import TestBlsWallets from "./helpers/TestBlsWallets.ts";
+import TestBlsWallet from "./helpers/TestBlsWallet.ts";
 
-const [wallet] = await TestBlsWallets(
+const wallet = await TestBlsWallet(
   new ethers.providers.JsonRpcProvider(env.RPC_URL),
-  1,
 );
 
 console.log({
