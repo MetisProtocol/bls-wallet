@@ -629,15 +629,15 @@ export default function AggregatorProxyCallback(
         for(var i = 0;i< abiParamsAttrs.length; i++){
           const paramType = abiParamsAttrs[i].trim().split(" ")[0];
           if(paramType == "address"){
-            transArgs.push(args[i]["value"]);
+            transArgs.push(args[i]);
           }else if(paramType == "uint256"){
-            transArgs.push(ethers.utils.parseUnits(args[i]["value"], 18));
+            transArgs.push(ethers.utils.parseUnits(args[i], 18));
           }else if(paramType == "bytes32"){
-            transArgs.push(ethers.utils.formatBytes32String(args[i]["value"]));
+            transArgs.push(ethers.utils.formatBytes32String(args[i]));
           }else if(paramType == "bytes"){
-            transArgs.push(ethers.utils.toUtf8Bytes(args[i]["value"]));
+            transArgs.push(ethers.utils.toUtf8Bytes(args[i]));
           }else{
-            transArgs.push(args[i]["value"]);
+            transArgs.push(args[i]);
           }
         }
       }
