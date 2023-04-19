@@ -377,7 +377,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.get("/bundleReceipt/:hash", bodyParser(), async (ctx) => {
-    console.log("bundleReceipt=====");
+    console.log("bundleReceipt=====",ctx.params.hash);
 
     const chainId = ctx.header["chain-id"];
     if(chainId == null || chainId == "" || chainId == undefined){
@@ -414,7 +414,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/getBlsAddress", bodyParser(), async (ctx) => {
-    console.log("getBlsAddress=====");
+    console.log("getBlsAddress=====",ctx.request.body);
     try {
       const transData: any = ctx.request.body;
       console.log("transData=", transData);
