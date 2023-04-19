@@ -331,7 +331,9 @@ export default class BundleService {
     expectedFee: BigNumber,
     expectedMaxCost: BigNumber,
   ) {
+    console.log("wait submissionSemaphore", includedRows)
     const releaseSemaphore = await this.submissionSemaphore.acquire();
+    console.log("got submissionSemaphore", includedRows)
     this.unconfirmedBundles.add(aggregateBundle);
 
     for (const row of includedRows) {
