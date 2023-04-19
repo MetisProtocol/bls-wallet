@@ -561,7 +561,7 @@ export default function AggregatorProxyCallback(
   });
 
   router.post("/bundleForBackend", bodyParser(), async (ctx) => {
-    console.log("bundleForBackend=====");
+    console.log("bundleForBackend=====",ctx.request.body);
     try {
       let transData: any = ctx.request.body;
       console.log("transData=", transData);
