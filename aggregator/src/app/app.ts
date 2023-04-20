@@ -78,7 +78,7 @@ export default async function app(emit: (evt: AppEvent) => void) {
       type: "request-start",
       data: {
         method: ctx.request.method,
-        path: ctx.request.url.pathname,
+        path: ctx.request.url,
       },
     });
 
@@ -104,6 +104,7 @@ export default async function app(emit: (evt: AppEvent) => void) {
   app.use(notFoundHandler);
 
   app.addEventListener("listen", () => {
+    emit({ type: "warning", data: "gasLimit:" +env.GAS_LIMIT  });
     emit({ type: "listening", data: { port: env.PORT } });
   });
 
