@@ -564,7 +564,7 @@ export default function AggregatorProxyCallback(
     console.log("bundleForBackend=====",ctx.request.body);
     try {
       let transData: any = ctx.request.body;
-      console.log("transData=", transData);
+      // console.log("transData=", transData);
 
       const chainId = ctx.header["chain-id"];
       if(chainId == null || chainId == "" || chainId == undefined){
