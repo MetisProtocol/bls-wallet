@@ -343,14 +343,17 @@ export default class BundleService {
     this.addTask(async () => {
       try {
         const balanceBefore = await this.ethereumService.wallet.getBalance();
-
+        console.log("balanceBefore=", balanceBefore)
         const receipt = await this.ethereumService.submitBundle(
           aggregateBundle,
           Infinity,
           300,
         );
+        console.log("receipt=", receipt)
 
         const balanceAfter = await this.ethereumService.wallet.getBalance();
+
+        console.log("balanceAfter=", balanceAfter)
 
         for (const row of includedRows) {
           this.bundleTable.update({

@@ -630,7 +630,7 @@ export default function AggregatorProxyCallback(
           const paramType = abiParamsAttrs[i].trim().split(" ")[0];
           if(paramType == "address"){
             transArgs.push(args[i]);
-          }else if(paramType == "uint256"){
+          }else if(paramType == "uint256" || paramType == "uint"){
             transArgs.push(ethers.utils.parseUnits(args[i], 18));
           }else if(paramType == "bytes32"){
             transArgs.push(ethers.utils.formatBytes32String(args[i]));

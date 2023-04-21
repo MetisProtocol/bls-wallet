@@ -282,10 +282,13 @@ export default class EthereumService {
     maxAttempts = 1,
     retryDelay = 300,
   ): Promise<ethers.providers.TransactionReceipt> {
+    console.log("bundle=", bundle)
+    console.log("maxAttempts=", maxAttempts)
     assert(bundle.operations.length > 0, "Cannot process empty bundle");
     assert(maxAttempts > 0, "Must have at least one attempt");
 
     const gasFees = await this.verificationGateway.estimateGas.processBundle(bundle);
+    console.log("gasFees=", gasFees)
     let gasLimit = 150;
     if(env != null && env.GAS_LIMIT != null && env.GAS_LIMIT >= 110){
       gasLimit = env.GAS_LIMIT;
@@ -304,10 +307,13 @@ export default class EthereumService {
       let txResponse: ethers.providers.TransactionResponse;
 
       try {
+        console.log("...processBundleArgs=", ...processBundleArgs)
         txResponse = await this.verificationGateway.processBundle(
           ...processBundleArgs,
         );
+        console.log("txResponse=", txResponse)
       } catch (error) {
+        console.log("error=", error)
         if (/\binvalid transaction nonce\b/.test(error.message)) {
           // This can occur when the nonce is in the future, which can
           // legitimately occur because the previous nonce is still being
@@ -324,6 +330,7 @@ export default class EthereumService {
       try {
         return { type: "receipt" as const, value: await txResponse.wait() };
       } catch (error) {
+        console.log("error2=", error)
         return { type: "waitError" as const, value: error };
       }
     };
@@ -336,7 +343,9 @@ export default class EthereumService {
         data: { attemptNumber: i + 1, publicKeyShorts },
       });
 
+      console.log("maxAttempts=", maxAttempts)
       const attemptResult = await attempt();
+      console.log("attemptResult=", attemptResult)
 
       if (attemptResult.type === "receipt") {
         return attemptResult.value;
