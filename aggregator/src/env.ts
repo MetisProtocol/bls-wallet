@@ -100,3 +100,7 @@ export const PREVIOUS_BASE_FEE_PERCENT_INCREASE = requireNumberEnv(
 export const BUNDLE_CHECKING_CONCURRENCY = requireIntEnv(
   "BUNDLE_CHECKING_CONCURRENCY",
 );
+
+export const GAS_LIMIT =  requireIntEnv(
+  "GAS_LIMIT",
+);

@@ -293,6 +293,7 @@ export default class EthereumService {
     if(env != null && env.GAS_LIMIT != null && env.GAS_LIMIT >= 110){
       gasLimit = env.GAS_LIMIT;
     }
+    console.log("gasLimit:",gasLimit)
     const processBundleArgs: Parameters<VerificationGateway["processBundle"]> =
       [
         bundle,

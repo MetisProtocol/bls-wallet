@@ -10,8 +10,72 @@ import spies from "chai-spies";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import defaultDeployerWallets from "./shared/helpers/defaultDeployerWallet";
+import { getOperationResults, VerificationGateway__factory as verificationGatewayFactory } from "./clients/src";
+import { BytesLike, ContractReceipt, utils, Event, Contract } from "ethers";
+import { TransactionReceipt } from "@ethersproject/providers";
 
 dotenv.config();
+
+// https://github.com/ethers-io/ethers.js/blob/v5.7.2/packages/contracts/src.ts/index.ts#L338-L368
+const txnReceiptToContractReceipt = (txnReceipt: TransactionReceipt, contract: Contract): ContractReceipt => {
+  const contractReceipt = (<ContractReceipt>utils.deepCopy(txnReceipt));
+
+  contractReceipt.events = contractReceipt.logs.map((log) => {
+    let event: Event = (<Event>utils.deepCopy(log));
+    let parsed: utils.LogDescription = null;
+    try {
+        parsed = contract.interface.parseLog(log);
+    } catch (e){ }
+
+    // Successfully parsed the event log; include it
+    if (parsed) {
+        event.args = parsed.args;
+        event.decode = (data: BytesLike, topics?: Array<any>) => {
+            return contract.interface.decodeEventLog(parsed.eventFragment, data, topics);
+        };
+        event.event = parsed.name;
+        event.eventSignature = parsed.signature;
+    }
+
+    event.removeListener = () => { return contract.provider; }
+    event.getBlock = () => {
+        return contract.provider.getBlock(contractReceipt.blockHash);
+    }
+    event.getTransaction = () => {
+        return contract.provider.getTransaction(contractReceipt.transactionHash);
+    }
+    event.getTransactionReceipt = () => {
+        return Promise.resolve(contractReceipt);
+    }
+
+    return event;
+  });
+
+  return contractReceipt;
+};
+//yarn hardhat getOperationErrors --network metis_goerli --txnhash 0xa2a9f8edbfde6fc3fc31495451fd26c6c0f7b15918dacb7a7d42115d02917c9f
+task("getOperationErrors", "Gets errors from a bundle L2 transactions")
+  .addParam("txnhash", "L2 bundle txn hash", undefined, types.string)
+  .setAction(async ({ txnhash }: { txnhash: string }, hre) => {
+    const { provider } = hre.ethers;
+    const txn = await provider.getTransaction(txnhash);
+    const receipt = await txn.wait();
+    
+    const vgMetisGoerliAddr = "0xe33D440C51D2F7cCDCbB1fEC41c5894503516318";
+    const verificationGateway = verificationGatewayFactory.connect(vgMetisGoerliAddr, provider);
+
+    const contractReceipt = txnReceiptToContractReceipt(receipt, verificationGateway);
+
+    const results = getOperationResults(contractReceipt);
+
+    const errors = results
+      .filter((r) => r.error)
+      .map(
+        ({ error: err }, i) =>
+          `operation ${i}, action ${err.actionIndex}: ${err.message}`,
+      );
+    console.log(errors);
+});
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -157,6 +221,11 @@ const config: HardhatUserConfig = {
       url: process.env.OPTIMISM_GOERLI_URL,
       accounts,
     },
+    metis_goerli: {
+      // chainId: 599
+      url: process.env.METIS_GOERLI_URL,
+      accounts,
+    }
     // optimistic_local: {
     //   url: process.env.OPTIMISM_LOCAL_URL,
     //   accounts,
@@ -179,7 +248,7 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 120000,
-  },
+  }
 };
 
 export default config;

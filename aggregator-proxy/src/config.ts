@@ -19,7 +19,7 @@ async function getAwsSecretValue(awsSecretName: string){
   };
   const command = new GetSecretValueCommand(input);
   const response = await client.send(command);
-  console.log("response=", response);
+  // console.log("response=", response);
   return response != null && response.SecretString != null ? response.SecretString : "";
 }
 
