@@ -17,9 +17,9 @@ async function sendTrans(apiHost: string, method: string, data: any, httpMethod:
     if (httpMethod === 'post') {
         res = await axios.post(apiHost + "/" + method, data, { headers });
     }else {
-        res = await axios.get(apiHost + "/" + method + "?" + data, { headers });
+        res = await axios.get(apiHost + "/" + method + (data?"?" + data:""), { headers });
     }
-    console.log("res=", res)
+    // console.log("res=", res)
     if (res.status === 200) {
         return res.data;
     }

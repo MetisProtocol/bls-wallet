@@ -74,25 +74,25 @@ export default async function app(emit: (evt: AppEvent) => void) {
   app.use(async (ctx, next) => {
     const startTime = Date.now();
 
-    emit({
-      type: "request-start",
-      data: {
-        method: ctx.request.method,
-        path: ctx.request.url,
-      },
-    });
+    // emit({
+    //   type: "request-start",
+    //   data: {
+    //     method: ctx.request.method,
+    //     path: ctx.request.url,
+    //   },
+    // });
 
     await next();
 
-    emit({
-      type: "request-end",
-      data: {
-        method: ctx.request.method,
-        path: ctx.request.url.pathname,
-        status: ctx.response.status,
-        duration: Date.now() - startTime,
-      },
-    });
+    // emit({
+    //   type: "request-end",
+    //   data: {
+    //     method: ctx.request.method,
+    //     path: ctx.request.url.pathname,
+    //     status: ctx.response.status,
+    //     duration: Date.now() - startTime,
+    //   },
+    // });
   });
 
   app.use(errorHandler);

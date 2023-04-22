@@ -103,6 +103,8 @@ export default class AggregationStrategy {
   }
 
   async run(eligibleRows: BundleRow[]): Promise<AggregationStrategyResult> {
+    console.log("eligibleRows1:",eligibleRows.length)
+
     eligibleRows = await this.#filterRows(eligibleRows);
 
     const bundleOverheadGas = await this.measureBundleOverheadGas();
@@ -307,7 +309,7 @@ export default class AggregationStrategy {
         rowsByKeyAndNonce.set(keyAndNonce, entry);
       }
     }
-
+    // console.log("rowsByKeyAndNonce:",rowsByKeyAndNonce)
     let filteredRows = rows;
 
     for (let rowGroup of rowsByKeyAndNonce.values()) {
@@ -322,6 +324,7 @@ export default class AggregationStrategy {
 
       filteredRows = filteredRows.filter((r) => !conflictingRows.includes(r));
     }
+    console.log("eligibleRows2:",filteredRows.length)
 
     return filteredRows;
   }
@@ -375,6 +378,7 @@ export default class AggregationStrategy {
     failedRows: BundleRow[];
     remainingEligibleRows: BundleRow[];
   }> {
+    console.log("eligibleRows:",eligibleRows.length)
     const candidateRows = eligibleRows.splice(
       0,
       this.config.bundleCheckingConcurrency,
@@ -387,7 +391,7 @@ export default class AggregationStrategy {
     const rowChecks = await Promise.all(
       candidateRows.map((r) => this.#checkBundle(r.bundle, bundleOverheadGas)),
     );
-
+    console.log("rowChecks:",rowChecks)
     const includedRows: BundleRow[] = [];
     const expectedFees: BigNumber[] = [];
     const failedRows: BundleRow[] = [];
@@ -460,7 +464,8 @@ export default class AggregationStrategy {
           )
         ),
       );
-
+    // console.log("bundles:",bundles)
+    // console.log("processBundleResults:",processBundleResults)
     return Range(bundles.length).map((i) => {
       const [before, after] = [measureResults[i], measureResults[i + 1]];
       assert(before.success);
@@ -540,7 +545,8 @@ export default class AggregationStrategy {
     );
 
     const requiredGas = marginalGasEstimate.add(bundleOverheadGasContribution);
-
+    
+    // console.log("requiredGas:",requiredGas)
     const { maxFeePerGas } = await this.ethereumService.GasConfig();
 
     const ethWeiFee = requiredGas.mul(maxFeePerGas);

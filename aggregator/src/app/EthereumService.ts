@@ -172,7 +172,7 @@ export default class EthereumService {
         this.verificationGateway.address,
         this.wallet,
       );
-
+      console.log("nextNonce:",nextNonce);
       if (nextNonce.gt(bundle.operations[i].nonce)) {
         failures.push({
           type: "duplicate-nonce",
@@ -290,7 +290,8 @@ export default class EthereumService {
     if(env != null && env.GAS_LIMIT != null && env.GAS_LIMIT >= 110){
       gasLimit = env.GAS_LIMIT;
     }
-    console.log("gasLimit:",gasLimit)
+    console.log("gasFees:",gasFees)
+    console.log("gasFees.mul(gasLimit).div(100):",gasFees.mul(gasLimit).div(100))
     const processBundleArgs: Parameters<VerificationGateway["processBundle"]> =
       [
         bundle,
@@ -309,6 +310,7 @@ export default class EthereumService {
           ...processBundleArgs,
         );
       } catch (error) {
+        console.log("submit error:",error)
         if (/\binvalid transaction nonce\b/.test(error.message)) {
           // This can occur when the nonce is in the future, which can
           // legitimately occur because the previous nonce is still being

@@ -262,9 +262,17 @@ export default class BundleTable {
     return result;
   }
 
-  all(): Row[] {
+  all(limit:number=100,status:string="all"): Row[] {
+    let where = "";
+    if(status!="all"){
+        where = "WHERE status = '"+status+"'"
+    }
+    console.log("where:",where)
     const rawRows = this.dbQuery(
-      "SELECT * FROM bundles",
+      `SELECT * FROM bundles ${where}  ORDER BY id ASC LIMIT :limit`,
+      {
+        ":limit": limit,
+      },
     );
 
     return rawRows.map(fromRawRow);

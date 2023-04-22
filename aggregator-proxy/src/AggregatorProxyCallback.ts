@@ -667,15 +667,16 @@ export default function AggregatorProxyCallback(
       );
       const nounce = String(await blsWallet.Nonce());
 
-      ;
+      console.log("nonce:",nounce)
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
       const estimateFeeResult = await upstreamAggregator.estimateFee(
         transformedBundle,
       );
+      
       console.log("estimateFee=====");
       const addResult = await upstreamAggregator.add(transformedBundle);
-      console.log("addbundle=====");
+      console.log("addbundle=====",addResult);
 
       ctx.status = 200;
       ctx.body = addResult;
@@ -691,6 +692,20 @@ export default function AggregatorProxyCallback(
   });
 
   router.get("/status", bodyParser(), async (ctx) => {
+    ctx.status = 200;
+    ctx.body = "ok";
+  });
+
+  router.get("/bundles/:chainId/:limit/:status", bodyParser(), async (ctx) => {
+    
+    const data = await httpExecute.requestAggregator(ctx.params.chainId,parseInt(ctx.params.limit),ctx.params.status)
+    ctx.status = 200;
+    ctx.body = data;
+  });
+
+  router.get("/bundlesclear/:chainId", bodyParser(), async (ctx) => {
+    
+    await httpExecute.clearBundle(ctx.params.chainId)
     ctx.status = 200;
     ctx.body = "ok";
   });

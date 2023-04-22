@@ -70,6 +70,7 @@ export default class BundleService {
   }
 
   handleBlock = () => {
+    console.log("handleBlock:")
     this.addTask(() => this.tryAggregating());
   };
 
@@ -81,6 +82,7 @@ export default class BundleService {
   }
 
   async runPendingTasks() {
+    console.log("runPendingTasks")
     while (this.pendingTaskPromises.size > 0) {
       await Promise.all(Array.from(this.pendingTaskPromises));
     }
@@ -97,6 +99,7 @@ export default class BundleService {
   }
 
   async tryAggregating() {
+    console.log("tryAggregating:")
     if (this.submissionsInProgress > 0) {
       // No need to check because there is already a submission in progress, and
       // a new check is run after every submission.
@@ -113,6 +116,7 @@ export default class BundleService {
       .map((r) => r.bundle.operations.length)
       .reduce(plus, 0);
 
+    console.log("opCount:",opCount)
     if (opCount >= this.config.breakevenOperationCount) {
       this.submissionTimer.trigger();
     } else if (opCount > 0) {
@@ -232,7 +236,7 @@ export default class BundleService {
 
   async runSubmission() {
     this.submissionsInProgress++;
-
+    console.log("start runSubmission")
     const bundleSubmitted = await this.runQueryGroup(async () => {
       const currentBlockNumber = await this.ethereumService.BlockNumber();
 
@@ -272,7 +276,7 @@ export default class BundleService {
           expectedMaxCost: ethers.utils.formatEther(expectedMaxCost),
         },
       });
-
+      console.log("failedRows:",failedRows.length)
       for (const failedRow of failedRows) {
         this.emit({
           type: "failed-row",
@@ -408,5 +412,13 @@ export default class BundleService {
       // FIXME (merge-ok): Polling
       await delay(100);
     }
+  }
+
+  queryBundle(limit:number,status:string="all"){
+    return this.bundleTable.all(limit,status)
+  }
+
+  clearBundle(){
+    return this.bundleTable.clear()
   }
 }
