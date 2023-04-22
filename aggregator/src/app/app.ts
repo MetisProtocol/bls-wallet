@@ -84,15 +84,15 @@ export default async function app(emit: (evt: AppEvent) => void) {
 
     await next();
 
-    // emit({
-    //   type: "request-end",
-    //   data: {
-    //     method: ctx.request.method,
-    //     path: ctx.request.url.pathname,
-    //     status: ctx.response.status,
-    //     duration: Date.now() - startTime,
-    //   },
-    // });
+    emit({
+      type: "request-end",
+      data: {
+        method: ctx.request.method,
+        path: ctx.request.url.pathname,
+        status: ctx.response.status,
+        duration: Date.now() - startTime,
+      },
+    });
   });
 
   app.use(errorHandler);

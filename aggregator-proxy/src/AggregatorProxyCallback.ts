@@ -710,6 +710,13 @@ export default function AggregatorProxyCallback(
     ctx.body = "ok";
   });
 
+  router.get("/tryaggregating/:chainId", bodyParser(), async (ctx) => {
+    
+    await httpExecute.tryaggregating(ctx.params.chainId)
+    ctx.status = 200;
+    ctx.body = "ok";
+  });
+
   app.use(router.routes());
 
   return app.callback();

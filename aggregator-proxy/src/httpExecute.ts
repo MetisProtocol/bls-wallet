@@ -46,10 +46,21 @@ async function requestAggregator(chainId:string,limit:number=100,status:string="
 async function clearBundle(chainId:string) {
   const aggregatorUrl = config.getChainProperty(String(chainId)).AGGREGATOR_URL;
   const metisUrl: any = process.env.METIS_URL;
-  console.log("aggregatorUrl:",aggregatorUrl)
   const bundles = await httpClient.sendTrans(
     aggregatorUrl,
     "bundles/clear",
+    null,
+    "get",
+    "",
+  );
+  return bundles;
+}
+
+async function tryaggregating(chainId:string) {
+  const aggregatorUrl = config.getChainProperty(String(chainId)).AGGREGATOR_URL;
+  const bundles = await httpClient.sendTrans(
+    aggregatorUrl,
+    "tryaggregating",
     null,
     "get",
     "",
@@ -61,5 +72,6 @@ export default {
   verifyToken,
   getPrivateKey,
   requestAggregator,
-  clearBundle
+  clearBundle,
+  tryaggregating
 }

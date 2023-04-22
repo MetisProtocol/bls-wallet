@@ -42,9 +42,10 @@ export default function BundleRouter(bundleService: BundleService) {
   );
 
   router.get(
-    "tryaggregating/",
+    "tryaggregating",
     (ctx) => {
-      ctx.response.body = bundleService.tryAggregating();
+      bundleService.tryAggregating();
+      ctx.response.body = "ok"
     },
   );
 
@@ -61,7 +62,6 @@ export default function BundleRouter(bundleService: BundleService) {
     "bundles/clear",
     (ctx) => {
       const data =  bundleService.clearBundle();
-      console.log("data:",data)
       ctx.response.body =data
     },
   );
