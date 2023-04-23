@@ -99,7 +99,7 @@ export default class BundleService {
   }
 
   async tryAggregating() {
-    console.log("tryAggregating:")
+    console.log("tryAggregating:",this.submissionsInProgress)
     if (this.submissionsInProgress > 0) {
       // No need to check because there is already a submission in progress, and
       // a new check is run after every submission.

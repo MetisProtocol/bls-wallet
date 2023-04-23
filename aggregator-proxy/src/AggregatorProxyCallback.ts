@@ -18,6 +18,7 @@ import httpExecute from "./httpExecute"
 import config from "./config"
 
 import BundleDto from "./BundleDto";
+import utils from "./utils"
 
 (globalThis as any).fetch ??= fetch;
 
@@ -602,48 +603,51 @@ export default function AggregatorProxyCallback(
         return;
       }
 
-      let transArgs = [];
-      const abiParamsAttr = funcAbi.split('(');
-      console.log("abiParamsAttr=", abiParamsAttr)
-      if(abiParamsAttr.length < 2){
-        ctx.status = 500;
-        ctx.body = "funcAbi is error";
-        return;
-      }
-      const abiParamsAttr2 = abiParamsAttr[1].split(')');
-      console.log("abiParamsAttr2=", abiParamsAttr)
-      if(abiParamsAttr2.length < 2){
-        ctx.status = 500;
-        ctx.body = "funcAbi is error";
-        return;
-      }
-      const abiParamsAttr3 = abiParamsAttr2[0];
-      console.log("abiParamsAttr3=", abiParamsAttr3)
-      if(abiParamsAttr3.length > 0){
-        const abiParamsAttrs = abiParamsAttr3.split(",");
-        if(abiParamsAttrs.length != args.length){
-          ctx.status = 500;
-          ctx.body = "funcAbi not match with args";
-          return;
-        }
-        for(var i = 0;i< abiParamsAttrs.length; i++){
-          const paramType = abiParamsAttrs[i].trim().split(" ")[0];
-          if(paramType == "address"){
-            transArgs.push(args[i]);
-          }else if(paramType == "uint256" || paramType == "uint"){
-            transArgs.push(ethers.utils.parseUnits(args[i], 18));
-          }else if(paramType == "bytes32"){
-            transArgs.push(ethers.utils.formatBytes32String(args[i]));
-          }else if(paramType == "bytes"){
-            transArgs.push(ethers.utils.toUtf8Bytes(args[i]));
-          }else{
-            transArgs.push(args[i]);
-          }
-        }
-      }
+      // // let transArgs = [];
+      // const abiParamsAttr = funcAbi.split('(');
+      // console.log("abiParamsAttr=", abiParamsAttr)
+      // if(abiParamsAttr.length < 2){
+      //   ctx.status = 500;
+      //   ctx.body = "funcAbi is error";
+      //   return;
+      // }
+      // const abiParamsAttr2 = abiParamsAttr[1].split(')');
+      // console.log("abiParamsAttr2=", abiParamsAttr)
+      // if(abiParamsAttr2.length < 2){
+      //   ctx.status = 500;
+      //   ctx.body = "funcAbi is error";
+      //   return;
+      // }
+      // const abiParamsAttr3 = abiParamsAttr2[0];
+      // console.log("abiParamsAttr3=", abiParamsAttr3)
+      // // if(abiParamsAttr3.length > 0){
+      // //   const abiParamsAttrs = abiParamsAttr3.split(",");
+      // //   if(abiParamsAttrs.length != args.length){
+      // //     ctx.status = 500;
+      // //     ctx.body = "funcAbi not match with args";
+      // //     return;
+      // //   }
+      // //   for(var i = 0;i< abiParamsAttrs.length; i++){
+      // //     const paramType = abiParamsAttrs[i].trim().split(" ")[0];
+      // //     if(paramType == "address"){
+      // //       transArgs.push(args[i]);
+      // //     }else if(paramType == "uint256" || paramType == "uint"){
+      // //       transArgs.push(ethers.utils.parseUnits(args[i], 18));
+      // //     }else if(paramType == "bytes32"){
+      // //       transArgs.push(ethers.utils.formatBytes32String(args[i]));
+      // //     }else if(paramType == "bytes"){
+      // //       transArgs.push(ethers.utils.toUtf8Bytes(args[i]));
+      // //     }else{
+      // //       transArgs.push(args[i]);
+      // //     }
+      // //   }
+      // // }
       const abiFace = new ethers.utils.Interface([funcAbi]);
-      
-      transData["encodedFunction"] = abiFace.encodeFunctionData(method, transArgs);
+      // console.log("abiFace inputs:",Object.values(abiFace.functions)[0].inputs);
+      const new_args = utils.convertArgs(funcAbi,args);
+
+      // console.log("transArgs:",transArgs)
+      transData["encodedFunction"] = abiFace.encodeFunctionData(method, new_args);
       console.log("transData[encodedFunction]=", transData["encodedFunction"])
         
       let privateKey = String(await config.getAwsSecretValue(awsSecretName));
@@ -670,17 +674,17 @@ export default function AggregatorProxyCallback(
       console.log("nonce:",nounce)
 
       const transformedBundle = await getBundle(transData, blsWallet, nounce);
-      const estimateFeeResult = await upstreamAggregator.estimateFee(
-        transformedBundle,
-      );
+      // const estimateFeeResult = await upstreamAggregator.estimateFee(
+      //   transformedBundle,
+      // );
       
-      console.log("estimateFee=====");
+      // console.log("estimateFee=====");
       const addResult = await upstreamAggregator.add(transformedBundle);
       console.log("addbundle=====",addResult);
 
       ctx.status = 200;
       ctx.body = addResult;
-      ctx.body.feeRequired = estimateFeeResult.feeRequired;
+      ctx.body.feeRequired =  0; //estimateFeeResult.feeRequired;
       ctx.body.nonce = nounce;
       ctx.body.blsAddress = blsWallet.address;
     } catch (error) {
