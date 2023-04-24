@@ -700,22 +700,37 @@ export default function AggregatorProxyCallback(
     ctx.body = "ok";
   });
 
-  router.get("/bundles/:chainId/:limit/:status", bodyParser(), async (ctx) => {
-    
+  router.get("/bundles/:checkToken/:chainId/:limit/:status", bodyParser(), async (ctx) => {
+    const checkToken = String(ctx.params.checkToken);
+    if(checkToken == null || checkToken == "" || checkToken == undefined || checkToken != process.env.AGGREGATOR_PROXY_CHECK_TOKEN){
+      ctx.status = 403;
+      ctx.body = "permission denied";
+      return;
+    }
     const data = await httpExecute.requestAggregator(ctx.params.chainId,parseInt(ctx.params.limit),ctx.params.status)
     ctx.status = 200;
     ctx.body = data;
   });
 
-  router.get("/bundlesclear/:chainId", bodyParser(), async (ctx) => {
-    
+  router.get("/bundlesclear/:checkToken/:chainId", bodyParser(), async (ctx) => {
+    const checkToken = String(ctx.params.checkToken);
+    if(checkToken == null || checkToken == "" || checkToken == undefined || checkToken != process.env.AGGREGATOR_PROXY_CHECK_TOKEN){
+      ctx.status = 403;
+      ctx.body = "permission denied";
+      return;
+    }
     await httpExecute.clearBundle(ctx.params.chainId)
     ctx.status = 200;
     ctx.body = "ok";
   });
 
-  router.get("/tryaggregating/:chainId", bodyParser(), async (ctx) => {
-    
+  router.get("/tryaggregating/:checkToken/:chainId", bodyParser(), async (ctx) => {
+    const checkToken = String(ctx.params.checkToken);
+    if(checkToken == null || checkToken == "" || checkToken == undefined || checkToken != process.env.AGGREGATOR_PROXY_CHECK_TOKEN){
+      ctx.status = 403;
+      ctx.body = "permission denied";
+      return;
+    }
     await httpExecute.tryaggregating(ctx.params.chainId)
     ctx.status = 200;
     ctx.body = "ok";
