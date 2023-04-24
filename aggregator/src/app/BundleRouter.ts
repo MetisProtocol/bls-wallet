@@ -29,10 +29,14 @@ export default function BundleRouter(bundleService: BundleService) {
 
       if (bundleRow?.receipt === nil) {
         ctx.response.status = 404;
-
+        let errorMsg = bundleRow?.submitError
+        if(bundleRow?.status=="failed" && bundleRow?.submitError  ){
+          errorMsg = "nonce is too small."
+        }
         ctx.response.body = {
-          submitError: bundleRow?.submitError,
+          submitError: errorMsg,
         };
+        
 
         return;
       }
