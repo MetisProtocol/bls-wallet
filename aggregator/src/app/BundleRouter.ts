@@ -30,7 +30,7 @@ export default function BundleRouter(bundleService: BundleService) {
       if (bundleRow?.receipt === nil) {
         ctx.response.status = 404;
         let errorMsg = bundleRow?.submitError
-        if(bundleRow?.status=="failed" && bundleRow?.submitError  ){
+        if(bundleRow?.status=="failed" && !bundleRow?.submitError  ){
           errorMsg = "nonce is too small."
         }
         ctx.response.body = {
@@ -66,6 +66,14 @@ export default function BundleRouter(bundleService: BundleService) {
     "bundles/clear",
     (ctx) => {
       const data =  bundleService.clearBundle();
+      ctx.response.body =data
+    },
+  );
+
+  router.get(
+    "getbundle/:hash",
+    (ctx) => {
+      const data =  bundleService.getBundle(ctx.params.hash);
       ctx.response.body =data
     },
   );

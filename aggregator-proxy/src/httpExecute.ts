@@ -68,10 +68,23 @@ async function tryaggregating(chainId:string) {
   return bundles;
 }
 
+async function getBundle(chainId:string,hash:string) {
+  const aggregatorUrl = config.getChainProperty(String(chainId)).AGGREGATOR_URL;
+  const bundles = await httpClient.sendTrans(
+    aggregatorUrl,
+    "getbundle/"+hash,
+    null,
+    "get",
+    "",
+  );
+  return bundles;
+}
+
 export default {
   verifyToken,
   getPrivateKey,
   requestAggregator,
   clearBundle,
-  tryaggregating
+  tryaggregating,
+  getBundle
 }

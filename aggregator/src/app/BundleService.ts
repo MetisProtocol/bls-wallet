@@ -99,7 +99,7 @@ export default class BundleService {
   }
 
   async tryAggregating() {
-    console.log("tryAggregating:",this.submissionsInProgress)
+    console.log("tryAggregating: submissionsInProgress=",this.submissionsInProgress)
     if (this.submissionsInProgress > 0) {
       // No need to check because there is already a submission in progress, and
       // a new check is run after every submission.
@@ -285,6 +285,7 @@ export default class BundleService {
               toShortPublicKey,
             ),
             submitError: failedRow.submitError,
+            hash:failedRow.hash
           },
         });
 
@@ -306,10 +307,11 @@ export default class BundleService {
     });
 
     this.submissionsInProgress--;
-
+    console.log("end runSubmission")
     if (bundleSubmitted) {
       this.addTask(() => this.tryAggregating());
     }
+
   }
 
   handleFailedRow(row: BundleRow, currentBlockNumber: BigNumber) {
@@ -353,7 +355,7 @@ export default class BundleService {
           Infinity,
           300,
         );
-        console.log("receipt=", receipt)
+        // console.log("receipt=", receipt)
 
         const balanceAfter = await this.ethereumService.wallet.getBalance();
 
@@ -419,6 +421,10 @@ export default class BundleService {
 
   queryBundle(limit:number,status:string="all"){
     return this.bundleTable.all(limit,status)
+  }
+
+  getBundle(hash:string){
+    return this.bundleTable.findBundle(hash)
   }
 
   clearBundle(){
