@@ -66,7 +66,7 @@ export default class BundleService {
       () => this.runSubmission(),
     );
 
-    // this.ethereumService.provider.on("block", this.handleBlock);
+    this.ethereumService.provider.on("block", this.handleBlock);
   }
 
   handleBlock = () => {
