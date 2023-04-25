@@ -695,6 +695,104 @@ export default function AggregatorProxyCallback(
     }
   });
 
+  router.post("/bundle/proxy", bodyParser(), async (ctx) => {
+    console.log("bundle proxy=====",ctx.request.body);
+    try {
+      let transData: any = ctx.request.body;
+      
+      const chainId = ctx.header["chain-id"];
+      if(chainId == null || chainId == "" || chainId == undefined){
+        console.log("chain-id is empty")
+        ctx.status = 500;
+        ctx.body = "chain-id is empty";
+        return;
+      }
+      const chainProperty = config.
+      getChainProperty(String(chainId));
+      const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+      const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+      const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+      if(aggregatorUrl == null || aggregatorUrl == "" ||
+          verificationGatewayUrl == null || verificationGatewayUrl == "" ||
+          jsonRpcUrl == null || jsonRpcUrl == ""){
+        console.log(`not support this chain [${chainId}]`)
+        ctx.status = 500;
+        ctx.body = `not support this chain [${chainId}]` ;
+        return;
+      }
+      const upstreamAggregator = new Aggregator(aggregatorUrl);
+
+      const awsSecretName = transData["awsSecretName"];
+     
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: jsonRpcUrl,
+        headers: { chainId: String(chainId) },
+      });
+      // get wallet nonce 
+      let privateKey="";
+      if(transData['pk']){
+          privateKey = transData['pk']
+      }else{
+         privateKey = String(await config.getAwsSecretValue(awsSecretName));
+        if (privateKey == null || privateKey == undefined || privateKey == "" || privateKey == "0x") {
+          ctx.status = 500;
+          ctx.body = "privateKey not existed";
+          return;
+        }
+      }
+      
+      if(!privateKey.startsWith("0x") && !privateKey.startsWith("0X")){
+        privateKey = "0x" + privateKey;
+      }
+    
+     const blsWallet = await BlsWalletWrapper.connect(
+        privateKey,
+        verificationGatewayUrl,
+        provider,
+      );
+      const nonce = String(await blsWallet.Nonce());
+
+      const trans = transData['trans']
+
+      
+      if(trans!="" && trans.length>0){
+        const actions:any[] = []
+        trans.forEach((tx:any) => {
+          const funcAbi = tx['funcAbi'];
+          const args = tx['args']
+          const method = tx['func']
+          const to = tx["to"]
+          const abiFace = new ethers.utils.Interface([funcAbi]);
+          const new_args = utils.convertArgs(funcAbi,args);
+          const encodedFunction = abiFace.encodeFunctionData(method, new_args)
+          const action = {
+            ethValue:tx['value'],
+            contractAddress:to,
+            encodedFunction
+          }
+          actions.push(action)
+        });
+        const transformedBundle = blsWallet.sign({
+          nonce,
+          actions: actions
+        });
+        const addResult = await upstreamAggregator.add(transformedBundle);
+        console.log("addbundle=====",addResult);
+        ctx.status = 200;
+        ctx.body = addResult;
+        ctx.body.feeRequired =  0; //estimateFeeResult.feeRequired;
+        ctx.body.nonce = nonce;
+        ctx.body.blsAddress = blsWallet.address;
+      }
+      
+    } catch (error) {
+      console.log("bundleForBackend error=", error);
+      ctx.status = 500;
+      ctx.body = "execute bundle error:" + error;
+      return;
+    }
+  });
+
   router.get("/status", bodyParser(), async (ctx) => {
     ctx.status = 200;
     ctx.body = "ok";

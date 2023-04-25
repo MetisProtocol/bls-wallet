@@ -24,6 +24,7 @@ type AppEvent =
     data: {
       publicKeyShorts: string[];
       submitError?: string;
+      hash:string
     };
   }
   | {

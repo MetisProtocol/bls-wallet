@@ -1,5 +1,6 @@
 
 import { ethers } from "ethers";
+import config from "./config"
 
 export function convertArgs(funcAbi:string,args:any[]){
   const abiFace = new ethers.utils.Interface([funcAbi]);
@@ -16,6 +17,15 @@ export function convertArgs(funcAbi:string,args:any[]){
       //ethers.utils.parseUnits(args[i], 18)
   }
   return args;
+}
+
+export function getAggregatorUrl(chainId:any){
+  const chainProperty = config.
+  getChainProperty(String(chainId));
+  const aggregatorUrl = chainProperty.AGGREGATOR_URL;
+  const verificationGatewayUrl = chainProperty.VERIFICATION_GATEWAY;
+  const jsonRpcUrl = chainProperty.JSON_RPC_URL;
+  
 }
 
 export default{

@@ -122,7 +122,7 @@ function toRawRow(row: Row): RawRow {
     eligibleAfter: toUint256Hex(row.eligibleAfter),
     nextEligibilityDelay: toUint256Hex(row.nextEligibilityDelay),
     submitError: row.submitError ?? null,
-    receipt: JSON.stringify(row.receipt),
+    receipt: row.receipt?JSON.stringify(row.receipt):null,
   };
 }
 
@@ -190,33 +190,37 @@ export default class BundleTable {
   }
 
   update(row: Row) {
-    const rawRow = toRawRow(row);
-
-    this.dbQuery(
-      `
-        UPDATE bundles
-        SET
-          status = :status,
-          hash = :hash,
-          bundle = :bundle,
-          eligibleAfter = :eligibleAfter,
-          nextEligibilityDelay = :nextEligibilityDelay,
-          submitError = :submitError,
-          receipt = :receipt
-        WHERE
-          id = :id
-      `,
-      {
-        ":id": rawRow.id,
-        ":status": rawRow.status,
-        ":hash": rawRow.hash,
-        ":bundle": rawRow.bundle,
-        ":eligibleAfter": rawRow.eligibleAfter,
-        ":nextEligibilityDelay": rawRow.nextEligibilityDelay,
-        ":submitError": rawRow.submitError,
-        ":receipt": rawRow.receipt,
-      },
-    );
+    try{
+      const rawRow = toRawRow(row);
+      this.dbQuery(
+        `
+          UPDATE bundles
+          SET
+            status = :status,
+            hash = :hash,
+            bundle = :bundle,
+            eligibleAfter = :eligibleAfter,
+            nextEligibilityDelay = :nextEligibilityDelay,
+            submitError = :submitError,
+            receipt = :receipt
+          WHERE
+            id = :id
+        `,
+        {
+          ":id": rawRow.id,
+          ":status": rawRow.status,
+          ":hash": rawRow.hash,
+          ":bundle": rawRow.bundle,
+          ":eligibleAfter": rawRow.eligibleAfter,
+          ":nextEligibilityDelay": rawRow.nextEligibilityDelay,
+          ":submitError": rawRow.submitError,
+          ":receipt": rawRow.receipt,
+        },
+      );  
+    }catch(e){
+        console.log("update error:",e)
+    }
+    
   }
 
   remove(...rows: Row[]) {

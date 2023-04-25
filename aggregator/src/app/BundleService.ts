@@ -66,7 +66,7 @@ export default class BundleService {
       () => this.runSubmission(),
     );
 
-    this.ethereumService.provider.on("block", this.handleBlock);
+    // this.ethereumService.provider.on("block", this.handleBlock);
   }
 
   handleBlock = () => {
@@ -171,7 +171,7 @@ export default class BundleService {
     }
 
     failures.push(...await this.ethereumService.checkNonces(bundle));
-
+    console.log("checknone failed:",failures)
     if (failures.length > 0) {
       return { failures };
     }
@@ -390,7 +390,16 @@ export default class BundleService {
             expectedFee: ethers.utils.formatEther(expectedFee),
           },
         });
-      } finally {
+      }catch(e){
+        for (const row of includedRows) {
+          this.bundleTable.update({
+            ...row,
+            submitError:e.message,
+            status: "failed",
+          });
+        }
+      }
+      finally {
         this.unconfirmedBundles.delete(aggregateBundle);
 
         for (const row of includedRows) {
