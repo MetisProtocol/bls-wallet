@@ -8,5 +8,5 @@ COPY ./networks ./networks
 COPY ./src ./src
 COPY ./programs/aggregator.ts ./programs/aggregator.ts
 RUN deno cache --unstable ./programs/aggregator.ts
-ADD --chmod=664 --chown=deno https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem /aws/rds-ca.pem
+ADD --chmod=664 --chown=deno https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /aws/rds-ca.pem
 CMD [ "run", "--unstable", "-A", "--cert", "/aws/rds-ca.pem", "./programs/aggregator.ts"]
